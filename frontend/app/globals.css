@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-700;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-dark-400 text-white;
+    font-family: 'Vazirmatn', 'Shabnam', system-ui, sans-serif;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse at top, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(45, 27, 78, 0.1) 0%, transparent 50%),
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 20px,
+        rgba(255, 107, 53, 0.02) 20px,
+        rgba(255, 107, 53, 0.02) 40px
+      ),
+      #0f0f0f;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255, 123, 71, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(45, 27, 78, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300;
+    background: linear-gradient(135deg, #ff6b35 0%, #ff7b47 50%, #ff6b35 100%);
+    background-size: 200% 200%;
+    box-shadow:
+      0 4px 15px rgba(255, 107, 53, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-primary:hover {
+    background-position: 100% 0;
+    box-shadow:
+      0 6px 20px rgba(255, 107, 53, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    @apply bg-dark-200 hover:bg-dark-100 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 border border-accent-500/50 hover:border-accent-500;
+  }
+
+  .card {
+    @apply bg-dark-100 rounded-xl p-6 border border-accent-500/10;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+  }
+
+  .input {
+    @apply bg-dark-200/80 border border-accent-500/20 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 transition-all w-full;
+    backdrop-filter: blur(10px);
+  }
+
+  .premium-accent {
+    background: linear-gradient(135deg, #ff6b35 0%, #ff7b47 50%, #ff6b35 100%);
+    background-size: 200% 200%;
+    box-shadow:
+      0 8px 25px rgba(255, 107, 53, 0.4),
+      inset 0 2px 5px rgba(255, 255, 255, 0.3),
+      inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  .premium-accent:hover {
+    background-position: 100% 0;
+    box-shadow:
+      0 12px 35px rgba(255, 107, 53, 0.5),
+      inset 0 2px 5px rgba(255, 255, 255, 0.4),
+      inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+  }
+}

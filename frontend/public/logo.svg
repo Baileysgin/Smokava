@@ -1,0 +1,66 @@
+<svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for orange-red (hookah top, mouthpiece) -->
+    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b35" />
+      <stop offset="50%" stop-color="#ff7b47" />
+      <stop offset="100%" stop-color="#ff5722" />
+    </linearGradient>
+
+    <!-- Gradient for purple (hookah base) -->
+    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8e24aa" />
+      <stop offset="50%" stop-color="#6a1b9a" />
+      <stop offset="100%" stop-color="#2d1b4e" />
+    </linearGradient>
+
+    <!-- Gradient for text -->
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6b35" />
+      <stop offset="100%" stop-color="#2d1b4e" />
+    </linearGradient>
+
+    <!-- Pixelated/glitch effect pattern -->
+    <pattern id="glitchPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="2" fill="rgba(255, 107, 53, 0.1)"/>
+      <rect y="2" width="8" height="2" fill="rgba(45, 27, 78, 0.1)"/>
+      <rect y="4" width="8" height="2" fill="rgba(255, 123, 71, 0.1)"/>
+      <rect y="6" width="8" height="2" fill="rgba(142, 36, 170, 0.1)"/>
+    </pattern>
+  </defs>
+
+  <!-- Background with glitch effect -->
+  <rect width="200" height="100" fill="#1a1a1a"/>
+  <rect width="200" height="100" fill="url(#glitchPattern)"/>
+
+  <!-- Hookah Illustration -->
+  <g transform="translate(100, 35)">
+    <!-- Base (Purple) -->
+    <ellipse cx="0" cy="25" rx="12" ry="6" fill="url(#purpleGradient)"/>
+
+    <!-- Stem (Purple to Orange transition) -->
+    <rect x="-2" y="5" width="4" height="20" fill="url(#purpleGradient)"/>
+
+    <!-- Bowl/Top (Orange-Red) -->
+    <circle cx="0" cy="8" r="5" fill="url(#orangeGradient)"/>
+
+    <!-- Smoke/Flame (Orange-Red) -->
+    <path d="M0 3 Q2 1 4 3 Q2 5 0 3" fill="url(#orangeGradient)" opacity="0.7"/>
+    <path d="M0 3 Q-2 1 -4 3 Q-2 5 0 3" fill="url(#orangeGradient)" opacity="0.5"/>
+
+    <!-- Hose (Orange-Red with curves) -->
+    <path d="M5 10 Q15 15 20 22 Q18 20 5 10" stroke="url(#orangeGradient)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M5 10 Q12 12 15 16" stroke="url(#orangeGradient)" stroke-width="1.5" fill="none" opacity="0.6"/>
+
+    <!-- Mouthpiece (Orange-Red) -->
+    <circle cx="20" cy="22" r="3" fill="url(#orangeGradient)"/>
+
+    <!-- Tongs (Orange-Red accent) -->
+    <path d="M-5 7 L-10 3 M5 7 L10 3" stroke="url(#orangeGradient)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Smokava Text -->
+  <text x="100" y="80" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="url(#textGradient)" letter-spacing="2">
+    smokava
+  </text>
+</svg>

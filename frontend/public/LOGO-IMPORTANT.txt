@@ -1,0 +1,19 @@
+IMPORTANT: To display your Smokava logo in the header:
+
+1. Place your logo image file in this public folder
+2. Name it EXACTLY one of these (copy your file here with one of these names):
+   - logo.svg (preferred)
+   - logo.png
+   - logo-icon.svg
+   - logo-icon.png
+
+3. Your logo file should be placed at:
+   /Users/negar/Desktop/Smokava/frontend/public/logo.svg
+   
+   (or logo.png, etc.)
+
+4. After placing the file, refresh your browser and the logo will appear automatically!
+
+The logo will appear on the RIGHT side of the header (Feed on left, Logo on right).
+
+Current status: No logo file found - showing "S" placeholder

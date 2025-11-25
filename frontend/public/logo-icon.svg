@@ -1,0 +1,41 @@
+<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for orange-red (hookah top, mouthpiece) -->
+    <linearGradient id="orangeGradIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b35" />
+      <stop offset="50%" stop-color="#ff7b47" />
+      <stop offset="100%" stop-color="#ff5722" />
+    </linearGradient>
+
+    <!-- Gradient for purple (hookah base) -->
+    <linearGradient id="purpleGradIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8e24aa" />
+      <stop offset="50%" stop-color="#6a1b9a" />
+      <stop offset="100%" stop-color="#2d1b4e" />
+    </linearGradient>
+  </defs>
+
+  <!-- Hookah Icon -->
+  <g transform="translate(24, 24)">
+    <!-- Base (Purple) -->
+    <ellipse cx="0" cy="12" rx="6" ry="3" fill="url(#purpleGradIcon)"/>
+
+    <!-- Stem (Purple) -->
+    <rect x="-1" y="3" width="2" height="9" fill="url(#purpleGradIcon)"/>
+
+    <!-- Bowl/Top (Orange-Red) -->
+    <circle cx="0" cy="4" r="2.5" fill="url(#orangeGradIcon)"/>
+
+    <!-- Smoke/Flame (Orange-Red) -->
+    <path d="M0 2 Q1 0.5 2 2 Q1 2.5 0 2" fill="url(#orangeGradIcon)" opacity="0.7"/>
+
+    <!-- Hose (Orange-Red with curves) -->
+    <path d="M2.5 5 Q7 7.5 10 11 Q9 10 2.5 5" stroke="url(#orangeGradIcon)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+    <!-- Mouthpiece (Orange-Red) -->
+    <circle cx="10" cy="11" r="1.5" fill="url(#orangeGradIcon)"/>
+
+    <!-- Tongs (Orange-Red accent) -->
+    <path d="M-2.5 3.5 L-5 1.5 M2.5 3.5 L5 1.5" stroke="url(#orangeGradIcon)" stroke-width="1" stroke-linecap="round"/>
+  </g>
+</svg>
