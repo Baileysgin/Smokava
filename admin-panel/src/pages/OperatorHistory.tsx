@@ -18,7 +18,8 @@ import {
   ReloadOutlined,
   SearchOutlined,
   UserOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  StarOutlined
 } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
@@ -44,6 +45,8 @@ interface HistoryItem {
   count: number;
   flavor: string;
   consumedAt: string;
+  rating?: number | null;
+  isGift?: boolean;
 }
 
 const OperatorHistory = () => {
@@ -176,6 +179,24 @@ const OperatorHistory = () => {
       ),
       sorter: (a, b) => dayjs(a.consumedAt).unix() - dayjs(b.consumedAt).unix(),
       defaultSortOrder: 'descend',
+    },
+    {
+      title: 'امتیاز',
+      dataIndex: 'rating',
+      key: 'rating',
+      align: 'center',
+      width: 120,
+      render: (rating: number | null | undefined) => {
+        if (!rating) {
+          return <Text type="secondary">—</Text>;
+        }
+        return (
+          <Space>
+            <StarOutlined style={{ color: '#faad14' }} />
+            <Text strong>{rating}</Text>
+          </Space>
+        );
+      },
     },
   ];
 

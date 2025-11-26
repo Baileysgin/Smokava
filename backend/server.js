@@ -64,7 +64,8 @@ app.get('/', (req, res) => {
       feed: '/api/feed',
       users: '/api/users',
       admin: '/api/admin',
-      operator: '/api/operator'
+      operator: '/api/operator',
+      rating: '/api/rating'
     }
   });
 });
@@ -77,6 +78,7 @@ app.use('/api/feed', require('./routes/feed'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/operator', require('./routes/operator'));
+app.use('/api/rating', require('./routes/ratings'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava')

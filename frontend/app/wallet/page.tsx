@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, MapPin, Wallet, ArrowUp, Key, Copy, Check } from 'lucide-react';
+import { Calendar, MapPin, Wallet, ArrowUp, Key, Copy, Check, Gift } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { usePackageStore } from '@/store/packageStore';
 import { useRestaurantStore } from '@/store/restaurantStore';
 import BottomNav from '@/components/BottomNav';
+import RatingModal from '@/components/RatingModal';
 
 export default function WalletPage() {
   const router = useRouter();
@@ -19,6 +20,15 @@ export default function WalletPage() {
   const [otpData, setOtpData] = useState<{ otpCode: string; expiresAt: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingData, setRatingData] = useState<{
+    restaurantId: string;
+    operatorId?: string;
+    packageId?: string;
+    redeemLogId: string;
+    isGift?: boolean;
+    restaurantName?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -84,7 +94,7 @@ export default function WalletPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-300 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'transparent' }}>
         <p className="text-gray-400">در حال بارگذاری...</p>
       </div>
     );
@@ -92,12 +102,12 @@ export default function WalletPage() {
 
   if (userPackages.length === 0) {
     return (
-      <div className="min-h-screen bg-dark-300 pb-20">
-        <div className="sticky top-0 z-10 bg-dark-300/95 backdrop-blur-lg border-b border-accent-500/20 p-4">
+      <div className="min-h-screen pb-20" style={{ backgroundColor: 'transparent' }}>
+        <div className="sticky top-0 z-10 backdrop-blur-lg border-b border-accent-500/20 p-4" style={{ backgroundColor: 'rgba(15, 15, 15, 0.7)' }}>
           <h2 className="text-2xl font-bold text-white text-center">پکیج های من</h2>
         </div>
         <div className="px-4 py-8">
-          <div className="bg-dark-100 border border-accent-500/20 rounded-3xl p-8 text-center">
+          <div className="border border-accent-500/20 rounded-3xl p-8 text-center backdrop-blur-xl" style={{ backgroundColor: 'rgba(45, 45, 45, 0.6)' }}>
             <p className="text-gray-400 mb-4">هیچ پکیجی ندارید</p>
           </div>
         </div>
@@ -106,16 +116,20 @@ export default function WalletPage() {
     );
   }
 
+  // Separate gift packages from regular packages
+  const regularPackages = userPackages.filter(pkg => !pkg.isGift && pkg.package);
+  const giftPackages = userPackages.filter(pkg => pkg.isGift);
+
   // Get the first active package (or most recent)
-  const activePackage = userPackages[0];
-  if (!activePackage || !activePackage.package) {
+  const activePackage = regularPackages[0] || userPackages[0];
+  if (!activePackage) {
     return (
-      <div className="min-h-screen bg-dark-300 pb-20">
-        <div className="sticky top-0 z-10 bg-dark-300/95 backdrop-blur-lg border-b border-accent-500/20 p-4">
+      <div className="min-h-screen pb-20" style={{ backgroundColor: 'transparent' }}>
+        <div className="sticky top-0 z-10 backdrop-blur-lg border-b border-accent-500/20 p-4" style={{ backgroundColor: 'rgba(15, 15, 15, 0.7)' }}>
           <h2 className="text-2xl font-bold text-white text-center">پکیج های من</h2>
         </div>
         <div className="px-4 py-8">
-          <div className="bg-dark-100 border border-accent-500/20 rounded-3xl p-8 text-center">
+          <div className="border border-accent-500/20 rounded-3xl p-8 text-center backdrop-blur-xl" style={{ backgroundColor: 'rgba(45, 45, 45, 0.6)' }}>
             <p className="text-gray-400 mb-4">در حال بارگذاری اطلاعات پکیج...</p>
           </div>
         </div>
@@ -135,7 +149,8 @@ export default function WalletPage() {
 
       <div className="px-4 py-6 max-w-md mx-auto space-y-6">
         {/* Current Balance Card */}
-        <div className="bg-dark-100 border-2 border-accent-500/30 rounded-3xl p-6 relative overflow-hidden backdrop-blur-xl" style={{
+        <div className="border-2 border-accent-500/30 rounded-3xl p-6 relative overflow-hidden backdrop-blur-xl" style={{
+          backgroundColor: 'rgba(45, 45, 45, 0.6)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 107, 53, 0.1)'
         }}>
           {/* Background Pattern */}
@@ -156,7 +171,9 @@ export default function WalletPage() {
             </div>
 
             <div className="mb-6 text-center">
-              <p className="text-gray-400 text-sm mb-3 font-medium">پکیج {activePackage.package?.nameFa || 'نامشخص'}</p>
+              <p className="text-gray-400 text-sm mb-3 font-medium">
+                {activePackage.isGift ? 'قلیون هدیه رستوران' : `پکیج ${activePackage.package?.nameFa || 'نامشخص'}`}
+              </p>
 
               {/* Circular Progress Indicator */}
               <div className="relative inline-flex items-center justify-center mb-3">
@@ -248,6 +265,46 @@ export default function WalletPage() {
           </div>
         </div>
 
+        {/* Gift Packages Section */}
+        {giftPackages.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Gift className="w-5 h-5 text-accent-500" />
+              <h3 className="text-lg font-bold text-white">قلیون‌های هدیه رستوران</h3>
+            </div>
+            <div className="space-y-3">
+              {giftPackages.map((giftPkg) => (
+                <div
+                  key={giftPkg._id}
+                  className="bg-gradient-to-br from-dark-100 to-dark-200 border-2 border-accent-500/40 rounded-2xl p-4 relative overflow-hidden"
+                >
+                  <div className="absolute top-2 left-2">
+                    <div className="bg-accent-500/20 border border-accent-500/40 rounded-full px-3 py-1">
+                      <span className="text-accent-500 text-xs font-semibold flex items-center gap-1">
+                        <Gift className="w-3 h-3" />
+                        هدیه
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white font-semibold">
+                        {giftPkg.giftFromRestaurantId?.nameFa || 'رستوران'}
+                      </span>
+                      <span className="text-2xl font-bold text-accent-500">
+                        {giftPkg.remainingCount}
+                      </span>
+                    </div>
+                    <p className="text-gray-400 text-xs">
+                      {giftPkg.remainingCount > 0 ? 'قابل استفاده' : 'استفاده شده'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Usage History */}
         <div>
           <h3 className="text-lg font-bold text-white mb-4">تاریخچه مصرف</h3>
@@ -256,7 +313,8 @@ export default function WalletPage() {
               activePackage.history.map((item, index) => (
                 <div
                   key={index}
-                  className="bg-dark-100 border border-accent-500/20 rounded-2xl p-4"
+                  className="border border-accent-500/20 rounded-2xl p-4 backdrop-blur-xl"
+                  style={{ backgroundColor: 'rgba(45, 45, 45, 0.6)' }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -403,6 +461,23 @@ export default function WalletPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Rating Modal */}
+      {ratingData && (
+        <RatingModal
+          isOpen={showRatingModal}
+          onClose={() => {
+            setShowRatingModal(false);
+            setRatingData(null);
+          }}
+          restaurantId={ratingData.restaurantId}
+          operatorId={ratingData.operatorId}
+          packageId={ratingData.packageId}
+          redeemLogId={ratingData.redeemLogId}
+          isGift={ratingData.isGift}
+          restaurantName={ratingData.restaurantName}
+        />
       )}
 
       <BottomNav />

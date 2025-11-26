@@ -1,9 +1,11 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const requireOperator = require('../middleware/operatorAuth');
 const User = require('../models/User');
 const UserPackage = require('../models/UserPackage');
 const Restaurant = require('../models/Restaurant');
+const Rating = require('../models/Rating');
 const { generateOTP } = require('../services/kavenegar');
 
 // Redeem package using OTP (for restaurant operators)
@@ -60,7 +62,7 @@ router.post('/redeem', requireOperator, async (req, res) => {
       return res.status(404).json({ message: 'Restaurant not found' });
     }
 
-    // Find user packages with remaining credits
+    // Find user packages with remaining credits (including gift packages)
     const userPackages = await UserPackage.find({
       user: user._id,
       remainingCount: { $gt: 0 }
@@ -69,6 +71,7 @@ router.post('/redeem', requireOperator, async (req, res) => {
     const redeemCount = count || user.consumptionOtpCount || 1;
     let remainingToDeduct = redeemCount;
     const consumedPackages = [];
+    const redeemLogId = new mongoose.Types.ObjectId(); // Generate unique ID for this redemption
 
     // Deduct from packages
     for (const userPackage of userPackages) {
@@ -80,13 +83,15 @@ router.post('/redeem', requireOperator, async (req, res) => {
         restaurant: operatorRestaurantId,
         count: deductCount,
         flavor: flavor || '',
-        consumedAt: new Date()
+        consumedAt: new Date(),
+        redeemLogId: redeemLogId
       });
 
       await userPackage.save();
       consumedPackages.push({
         packageId: userPackage._id,
-        count: deductCount
+        count: deductCount,
+        isGift: userPackage.isGift || false
       });
 
       remainingToDeduct -= deductCount;
@@ -104,14 +109,20 @@ router.post('/redeem', requireOperator, async (req, res) => {
     user.consumptionOtpUsed = true;
     await user.save();
 
+    // Check if rating already exists for this redemption
+    const existingRating = await Rating.findOne({ userId: user._id, redeemLogId });
+
     res.json({
       message: 'Package redeemed successfully',
       restaurant: {
         name: restaurant.nameFa,
         _id: restaurant._id
       },
+      operatorId: req.user._id,
       count: redeemCount,
       consumedPackages,
+      redeemLogId: redeemLogId.toString(),
+      requiresRating: !existingRating, // True if rating is required
       user: {
         name: user.name || user.firstName || user.phoneNumber,
         phoneNumber: user.phoneNumber
@@ -149,6 +160,27 @@ router.get('/history', requireOperator, async (req, res) => {
       .populate('package', 'nameFa count price')
       .populate('history.restaurant', 'nameFa addressFa');
 
+    // Get all redeemLogIds from history
+    const redeemLogIds = [];
+    userPackages.forEach(userPackage => {
+      if (userPackage.history && userPackage.history.length > 0) {
+        userPackage.history.forEach(item => {
+          if (item.redeemLogId) {
+            redeemLogIds.push(item.redeemLogId);
+          }
+        });
+      }
+    });
+
+    // Get ratings for these redemptions
+    const ratings = await Rating.find({ redeemLogId: { $in: redeemLogIds } });
+    const ratingMap = {};
+    ratings.forEach(rating => {
+      if (rating.redeemLogId) {
+        ratingMap[rating.redeemLogId.toString()] = rating.rating;
+      }
+    });
+
     // Flatten history for this restaurant
     const historyItems = [];
     userPackages.forEach(userPackage => {
@@ -162,6 +194,7 @@ router.get('/history', requireOperator, async (req, res) => {
               if (startDate && consumedDate < new Date(startDate)) return;
               if (endDate && consumedDate > new Date(endDate)) return;
             }
+            const redeemLogIdStr = item.redeemLogId?.toString();
             historyItems.push({
               id: item._id,
               user: userPackage.user,
@@ -169,7 +202,9 @@ router.get('/history', requireOperator, async (req, res) => {
               restaurant: item.restaurant,
               count: item.count,
               flavor: item.flavor,
-              consumedAt: item.consumedAt
+              consumedAt: item.consumedAt,
+              isGift: userPackage.isGift || false,
+              rating: redeemLogIdStr ? (ratingMap[redeemLogIdStr] || null) : null
             });
           }
         });
@@ -350,6 +385,63 @@ router.get('/dashboard', requireOperator, async (req, res) => {
     });
   } catch (error) {
     console.error('Get operator dashboard error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Give gift قلیون to customer (no OTP required)
+router.post('/gift', requireOperator, async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    const operatorRestaurantId = req.user.assignedRestaurant?._id || req.user.assignedRestaurant;
+    const operatorId = req.user._id;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ message: 'شماره تلفن مشتری الزامی است' });
+    }
+
+    // Check if customer exists
+    const user = await User.findOne({ phoneNumber });
+    if (!user) {
+      return res.status(404).json({ message: 'کاربر یافت نشد' });
+    }
+
+    // Get restaurant
+    const restaurant = await Restaurant.findById(operatorRestaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'رستوران یافت نشد' });
+    }
+
+    // Create gift package
+    const giftPackage = new UserPackage({
+      user: user._id,
+      isGift: true,
+      giftFromRestaurantId: operatorRestaurantId,
+      operatorId: operatorId,
+      totalCount: 1,
+      remainingCount: 1,
+      status: 'active',
+      purchasedAt: new Date()
+    });
+
+    await giftPackage.save();
+
+    res.json({
+      message: 'یک قلیون به عنوان هدیه برای کاربر فعال شد.',
+      giftPackage: {
+        _id: giftPackage._id,
+        user: {
+          name: user.name || user.firstName || user.phoneNumber,
+          phoneNumber: user.phoneNumber
+        },
+        restaurant: {
+          name: restaurant.nameFa,
+          _id: restaurant._id
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Operator gift error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

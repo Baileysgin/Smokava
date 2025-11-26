@@ -9,7 +9,24 @@ const userPackageSchema = new mongoose.Schema({
   package: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Package',
-    required: true
+    required: function() {
+      return !this.isGift; // Package is required only if not a gift
+    }
+  },
+  // Gift package fields
+  isGift: {
+    type: Boolean,
+    default: false
+  },
+  giftFromRestaurantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Restaurant',
+    default: null
+  },
+  operatorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   },
   totalCount: {
     type: Number,
@@ -44,6 +61,10 @@ const userPackageSchema = new mongoose.Schema({
     consumedAt: {
       type: Date,
       default: Date.now
+    },
+    redeemLogId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
     }
   }]
 });

@@ -13,6 +13,8 @@ import SoldPackages from './pages/SoldPackages';
 import Users from './pages/Users';
 import UserDetails from './pages/UserDetails';
 import PackageManagement from './pages/PackageManagement';
+import Gifts from './pages/Gifts';
+import Ratings from './pages/Ratings';
 import { useAuthStore } from './store/authStore';
 import { useOperatorAuthStore } from './store/operatorAuthStore';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -65,6 +67,8 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetails />} />
             <Route path="package-management" element={<PackageManagement />} />
+            <Route path="gifts" element={<Gifts />} />
+            <Route path="ratings" element={<Ratings />} />
           </Route>
           <Route path="/operator/login" element={<OperatorLogin />} />
           <Route

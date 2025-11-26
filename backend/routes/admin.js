@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const UserPackage = require('../models/UserPackage');
 const Package = require('../models/Package');
+const Rating = require('../models/Rating');
 const auth = require('../middleware/auth');
 
 // Admin login
@@ -663,6 +664,216 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Update package error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all gifts (gift packages)
+router.get('/gifts', auth, requireAdmin, async (req, res) => {
+  try {
+    const { restaurantId, operatorId, customerPhone, startDate, endDate, page = 1, limit = 20 } = req.query;
+
+    const query = { isGift: true };
+
+    if (restaurantId) {
+      query.giftFromRestaurantId = restaurantId;
+    }
+
+    if (operatorId) {
+      query.operatorId = operatorId;
+    }
+
+    // Build date filter
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.purchasedAt = {};
+      if (startDate) {
+        dateFilter.purchasedAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        dateFilter.purchasedAt.$lte = new Date(endDate);
+      }
+    }
+
+    const finalQuery = { ...query, ...dateFilter };
+
+    // If customer phone is provided, find user first
+    if (customerPhone) {
+      const user = await User.findOne({ phoneNumber: customerPhone });
+      if (user) {
+        finalQuery.user = user._id;
+      } else {
+        // No user found, return empty result
+        return res.json({
+          items: [],
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: 0
+        });
+      }
+    }
+
+    const total = await UserPackage.countDocuments(finalQuery);
+    const gifts = await UserPackage.find(finalQuery)
+      .populate('user', 'phoneNumber firstName lastName name')
+      .populate('giftFromRestaurantId', 'nameFa addressFa')
+      .populate('operatorId', 'firstName lastName')
+      .sort({ purchasedAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    // Check if each gift is used
+    const giftsWithStatus = gifts.map(gift => {
+      const isUsed = gift.remainingCount === 0;
+      return {
+        ...gift.toObject(),
+        status: isUsed ? 'Used' : 'Not used'
+      };
+    });
+
+    res.json({
+      items: giftsWithStatus,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    console.error('Get gifts error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all ratings/feedbacks
+router.get('/ratings', auth, requireAdmin, async (req, res) => {
+  try {
+    const { restaurantId, operatorId, rating, startDate, endDate, page = 1, limit = 20 } = req.query;
+
+    const query = {};
+
+    if (restaurantId) {
+      query.restaurantId = restaurantId;
+    }
+
+    if (operatorId) {
+      query.operatorId = operatorId;
+    }
+
+    if (rating) {
+      query.rating = parseInt(rating);
+    }
+
+    // Build date filter
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) {
+        dateFilter.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        dateFilter.createdAt.$lte = new Date(endDate);
+      }
+    }
+
+    const finalQuery = { ...query, ...dateFilter };
+
+    const total = await Rating.countDocuments(finalQuery);
+    const ratings = await Rating.find(finalQuery)
+      .populate('userId', 'phoneNumber firstName lastName name')
+      .populate('restaurantId', 'nameFa addressFa')
+      .populate('operatorId', 'firstName lastName')
+      .populate('packageId', 'isGift')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const ratingsWithPackageType = ratings.map(rating => ({
+      ...rating.toObject(),
+      packageType: rating.packageId?.isGift ? 'Gift' : 'Purchased'
+    }));
+
+    res.json({
+      items: ratingsWithPackageType,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    console.error('Get ratings error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get ratings analytics
+router.get('/ratings/analytics', auth, requireAdmin, async (req, res) => {
+  try {
+    const { restaurantId, startDate, endDate } = req.query;
+
+    const query = {};
+    if (restaurantId) {
+      query.restaurantId = restaurantId;
+    }
+
+    // Build date filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.createdAt.$lte = new Date(endDate);
+      }
+    }
+
+    const ratings = await Rating.find(query)
+      .populate('restaurantId', 'nameFa');
+
+    // Calculate average rating per restaurant
+    const restaurantRatings = {};
+    ratings.forEach(rating => {
+      const restaurantId = rating.restaurantId?._id?.toString() || 'unknown';
+      const restaurantName = rating.restaurantId?.nameFa || 'Unknown';
+
+      if (!restaurantRatings[restaurantId]) {
+        restaurantRatings[restaurantId] = {
+          name: restaurantName,
+          ratings: [],
+          total: 0,
+          count: 0
+        };
+      }
+
+      restaurantRatings[restaurantId].ratings.push(rating.rating);
+      restaurantRatings[restaurantId].total += rating.rating;
+      restaurantRatings[restaurantId].count += 1;
+    });
+
+    // Calculate averages and find best/worst
+    const restaurantStats = Object.values(restaurantRatings).map(rest => ({
+      restaurantId: Object.keys(restaurantRatings).find(
+        id => restaurantRatings[id].name === rest.name
+      ),
+      restaurantName: rest.name,
+      averageRating: rest.count > 0 ? (rest.total / rest.count).toFixed(2) : 0,
+      totalRatings: rest.count
+    }));
+
+    // Sort by average rating
+    restaurantStats.sort((a, b) => parseFloat(b.averageRating) - parseFloat(a.averageRating));
+
+    const bestRestaurant = restaurantStats.length > 0 ? restaurantStats[0] : null;
+    const worstRestaurant = restaurantStats.length > 0 ? restaurantStats[restaurantStats.length - 1] : null;
+
+    res.json({
+      totalRatings: ratings.length,
+      averageRatingPerRestaurant: restaurantStats,
+      bestRestaurant,
+      worstRestaurant
+    });
+  } catch (error) {
+    console.error('Get ratings analytics error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

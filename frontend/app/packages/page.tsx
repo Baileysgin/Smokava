@@ -49,9 +49,9 @@ export default function PackagesPage() {
   const popularPackage = packages.find((pkg) => pkg.badge === 'popular');
 
   return (
-    <div className="min-h-screen bg-dark-300 pb-20">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'transparent' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-300/95 backdrop-blur-lg border-b border-accent-500/20 p-4">
+      <div className="sticky top-0 z-10 backdrop-blur-lg border-b border-accent-500/20 p-4" style={{ backgroundColor: 'rgba(15, 15, 15, 0.7)' }}>
         <h2 className="text-2xl font-bold text-accent-500 text-center mb-1">
           انتخاب پکیج قلیان
         </h2>

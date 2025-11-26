@@ -86,6 +86,8 @@ router.get('/my-packages', auth, async (req, res) => {
   try {
     const userPackages = await UserPackage.find({ user: req.user._id })
       .populate('package')
+      .populate('giftFromRestaurantId', 'nameFa addressFa')
+      .populate('operatorId', 'firstName lastName')
       .populate('history.restaurant')
       .sort({ purchasedAt: -1 });
 

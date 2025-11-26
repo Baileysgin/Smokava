@@ -89,9 +89,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-300 pb-20">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'transparent' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-300/95 backdrop-blur-lg border-b border-accent-500/20 p-4">
+      <div className="sticky top-0 z-10 backdrop-blur-lg border-b border-accent-500/20 p-4" style={{ backgroundColor: 'rgba(15, 15, 15, 0.7)' }}>
         <div className="flex items-center justify-between max-w-md mx-auto">
           <button
             onClick={() => setShowSettings(true)}

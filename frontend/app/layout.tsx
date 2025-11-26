@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { SmokeBackground } from '@/components/ui/spooky-smoke-animation'
 
 export const metadata: Metadata = {
   title: 'Smokava - اسموکاوا',
@@ -19,7 +20,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="bg-dark-400 text-white font-sans antialiased">{children}</body>
+      <body className="text-white font-sans antialiased relative min-h-screen">
+        <SmokeBackground smokeColor="#ff6b35" />
+        <div className="relative z-10">
+          {children}
+        </div>
+      </body>
     </html>
   )
 }

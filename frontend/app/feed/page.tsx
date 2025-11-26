@@ -318,9 +318,9 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-300 pb-20">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'transparent' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-300/98 backdrop-blur-xl border-b border-accent-500/30 shadow-lg">
+      <div className="sticky top-0 z-10 backdrop-blur-xl border-b border-accent-500/30 shadow-lg" style={{ backgroundColor: 'rgba(15, 15, 15, 0.7)' }}>
         <div className="max-w-2xl mx-auto px-4 py-3">
           {/* Top Row: Feed on LEFT, Logo on RIGHT */}
           <div className="flex items-center justify-between" dir="ltr">
@@ -392,8 +392,9 @@ export default function FeedPage() {
             {posts.map((post) => (
               <div
                 key={post._id}
-                className="bg-dark-100 border border-accent-500/20 rounded-3xl overflow-hidden backdrop-blur-xl"
+                className="border border-accent-500/20 rounded-3xl overflow-hidden backdrop-blur-xl"
                 style={{
+                  backgroundColor: 'rgba(45, 45, 45, 0.6)',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 107, 53, 0.05)'
                 }}
               >
@@ -592,7 +593,7 @@ export default function FeedPage() {
       {/* Create Post Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-dark-200 border border-accent-500/30 rounded-3xl p-6 max-w-md w-full my-4 max-h-[90vh] flex flex-col">
+          <div className="border border-accent-500/30 rounded-3xl p-6 max-w-md w-full my-4 max-h-[90vh] flex flex-col backdrop-blur-xl" style={{ backgroundColor: 'rgba(26, 26, 26, 0.7)' }}>
             <h2 className="text-2xl font-bold mb-6 text-accent-500 flex-shrink-0">پست جدید</h2>
             <div className="space-y-5 overflow-y-auto flex-1 pr-2">
               <div>
@@ -707,7 +708,7 @@ export default function FeedPage() {
       {/* Delete Confirmation Modal */}
       {deleteConfirmPostId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-dark-200 border border-accent-500/30 rounded-3xl p-6 max-w-md w-full">
+          <div className="border border-accent-500/30 rounded-3xl p-6 max-w-md w-full backdrop-blur-xl" style={{ backgroundColor: 'rgba(26, 26, 26, 0.7)' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
                 <Trash2 className="w-6 h-6 text-red-400" />

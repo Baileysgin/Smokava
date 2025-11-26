@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: smokava-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: smokava
+    volumes:
+      - mongodb_data_dev:/data/db
+    networks:
+      - smokava-network-dev
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: smokava-backend-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/smokava
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - KAVENEGAR_API_KEY=${KAVENEGAR_API_KEY:-}
+      - KAVENEGAR_TEMPLATE=${KAVENEGAR_TEMPLATE:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - smokava-network-dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: smokava-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+      - NEXT_PUBLIC_MAPBOX_TOKEN=${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    depends_on:
+      - backend
+    networks:
+      - smokava-network-dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+  admin-panel:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile.dev
+    container_name: smokava-admin-panel-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - smokava-network-dev
+    volumes:
+      - ./admin-panel:/app
+      - /app/node_modules
+    command: npm run dev -- --host --port 5173
+
+networks:
+  smokava-network-dev:
+    driver: bridge
+
+volumes:
+  mongodb_data_dev:
+    driver: local

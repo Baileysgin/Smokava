@@ -14,7 +14,13 @@ export interface Package {
 export interface UserPackage {
   _id: string;
   user: string;
-  package: Package;
+  package?: Package;
+  isGift?: boolean;
+  giftFromRestaurantId?: {
+    _id: string;
+    nameFa: string;
+    addressFa?: string;
+  };
   totalCount: number;
   remainingCount: number;
   purchasedAt: string;
@@ -39,6 +45,7 @@ interface PackageState {
   purchasePackage: (packageId: string) => Promise<{ paymentUrl: string; userPackageId: string; amount: number }>;
   generateConsumptionOtp: (restaurantId: string, count?: number) => Promise<{ otpCode: string; expiresAt: string; restaurantId: string; count: number }>;
   redeemShisha: (userPackageId: string, restaurantId: string, count?: number) => Promise<void>;
+  submitRating: (data: { restaurantId: string; operatorId?: string; packageId?: string; redeemLogId: string; rating: number; isGift?: boolean }) => Promise<void>;
 }
 
 export const usePackageStore = create<PackageState>((set, get) => ({
@@ -100,6 +107,15 @@ export const usePackageStore = create<PackageState>((set, get) => ({
       await get().fetchUserPackages();
     } catch (error) {
       console.error('Redeem shisha error:', error);
+      throw error;
+    }
+  },
+
+  submitRating: async (data: { restaurantId: string; operatorId?: string; packageId?: string; redeemLogId: string; rating: number; isGift?: boolean }) => {
+    try {
+      await api.post('/rating/submit', data);
+    } catch (error) {
+      console.error('Submit rating error:', error);
       throw error;
     }
   },

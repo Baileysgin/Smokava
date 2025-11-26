@@ -13,34 +13,11 @@
   }
 
   body {
-    @apply bg-dark-400 text-white;
+    @apply text-white;
     font-family: 'Vazirmatn', 'Shabnam', system-ui, sans-serif;
     overflow-x: hidden;
-    background:
-      radial-gradient(ellipse at top, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at bottom, rgba(45, 27, 78, 0.1) 0%, transparent 50%),
-      repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 20px,
-        rgba(255, 107, 53, 0.02) 20px,
-        rgba(255, 107, 53, 0.02) 40px
-      ),
-      #0f0f0f;
+    background: #0f0f0f;
     position: relative;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(255, 123, 71, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 50%, rgba(45, 27, 78, 0.08) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
   }
 }
 

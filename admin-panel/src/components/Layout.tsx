@@ -8,6 +8,8 @@ import {
   ShoppingOutlined,
   UserOutlined,
   AppstoreOutlined,
+  GiftOutlined,
+  StarOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
 
@@ -48,6 +50,16 @@ const Layout = () => {
       key: '/package-management',
       icon: <AppstoreOutlined />,
       label: 'مدیریت پکیج',
+    },
+    {
+      key: '/gifts',
+      icon: <GiftOutlined />,
+      label: 'هدایا',
+    },
+    {
+      key: '/ratings',
+      icon: <StarOutlined />,
+      label: 'نظرات و امتیازها',
     },
   ];
 

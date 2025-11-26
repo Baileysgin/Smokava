@@ -20,7 +20,8 @@ import {
   EditOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  GiftOutlined
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
@@ -36,6 +37,8 @@ const OperatorRedeem = () => {
   const [form] = Form.useForm();
   const [successCount, setSuccessCount] = useState(0);
   const [todayRedeemed, setTodayRedeemed] = useState(0);
+  const [giftForm] = Form.useForm();
+  const [giftLoading, setGiftLoading] = useState(false);
 
   useEffect(() => {
     fetchTodayStats();
@@ -65,6 +68,33 @@ const OperatorRedeem = () => {
       message.error(errorMessage);
     } finally {
       setGeneratingOtp(false);
+    }
+  };
+
+  const handleGift = async (values: { phoneNumber: string }) => {
+    try {
+      setGiftLoading(true);
+      const response = await api.post('/operator/gift', {
+        phoneNumber: values.phoneNumber,
+      });
+
+      message.success({
+        content: response.data.message || 'یک قلیون به عنوان هدیه برای کاربر فعال شد.',
+        duration: 4,
+        icon: <GiftOutlined style={{ color: '#52c41a' }} />,
+      });
+
+      giftForm.resetFields();
+      fetchTodayStats();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'خطا در هدیه دادن قلیون';
+      message.error({
+        content: `❌ ${errorMessage}`,
+        duration: 5,
+        icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+      });
+    } finally {
+      setGiftLoading(false);
     }
   };
 
@@ -109,6 +139,59 @@ const OperatorRedeem = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Row gutter={[24, 24]}>
+        {/* Gift Card */}
+        <Col xs={24} lg={16}>
+          <Card
+            title={
+              <Space>
+                <GiftOutlined style={{ fontSize: '20px', color: '#ff4d4f' }} />
+                <Title level={4} style={{ margin: 0 }}>هدیه دادن یک قلیون</Title>
+              </Space>
+            }
+            style={{ marginBottom: '24px' }}
+          >
+            <Form
+              form={giftForm}
+              name="gift"
+              onFinish={handleGift}
+              layout="inline"
+              autoComplete="off"
+              size="large"
+              style={{ width: '100%' }}
+            >
+              <Form.Item
+                name="phoneNumber"
+                rules={[
+                  { required: true, message: 'لطفا شماره تلفن را وارد کنید' },
+                  { pattern: /^09\d{9}$/, message: 'شماره تلفن معتبر نیست' }
+                ]}
+                style={{ flex: 1, marginRight: '8px' }}
+              >
+                <Input
+                  prefix={<PhoneOutlined />}
+                  placeholder="09123456789"
+                  style={{ fontSize: '16px' }}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<GiftOutlined />}
+                  loading={giftLoading}
+                  danger
+                  style={{
+                    height: '40px',
+                    fontSize: '16px',
+                  }}
+                >
+                  هدیه دادن قلیون
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+
         {/* Main Form */}
         <Col xs={24} lg={16}>
           <Card
