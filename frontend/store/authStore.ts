@@ -21,6 +21,8 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   following: User[];
+  sendOTP: (phoneNumber: string) => Promise<{ message: string; expiresIn: number }>;
+  verifyOTP: (phoneNumber: string, code: string) => Promise<{ token: string; user: User }>;
   login: (phoneNumber: string) => Promise<void>;
   telegramLogin: (telegramData: any) => Promise<void>;
   logout: () => void;
@@ -51,7 +53,43 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isAuthenticated: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false,
     following: [],
 
+    sendOTP: async (phoneNumber: string) => {
+      try {
+        const response = await api.post('/auth/send-otp', { phoneNumber }, { timeout: 30000 });
+        return response.data;
+      } catch (error: any) {
+        console.error('Send OTP error:', error);
+        // Provide user-friendly error messages
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          throw new Error('درخواست شما زمان زیادی طول کشید. لطفا دوباره تلاش کنید.');
+        } else if (error.code === 'ERR_NETWORK' || !error.response) {
+          throw new Error('خطا در اتصال به سرور. لطفا اتصال اینترنت خود را بررسی کنید.');
+        }
+        throw error;
+      }
+    },
+    verifyOTP: async (phoneNumber: string, code: string) => {
+      try {
+        const response = await api.post('/auth/verify-otp', { phoneNumber, code }, { timeout: 30000 });
+        const { token, user } = response.data;
+        localStorage.setItem('token', token);
+        set({ user, token, isAuthenticated: true });
+        return { token, user };
+      } catch (error: any) {
+        console.error('Verify OTP error:', error);
+        // Handle timeout and network errors
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          throw new Error('درخواست شما زمان زیادی طول کشید. لطفا دوباره تلاش کنید.');
+        } else if (error.code === 'ERR_NETWORK' || !error.response) {
+          throw new Error('خطا در اتصال به سرور. لطفا اتصال اینترنت خود را بررسی کنید.');
+        }
+        const errorMessage = error.response?.data?.message || 'Failed to verify OTP';
+        throw new Error(errorMessage);
+      }
+    },
     login: async (phoneNumber: string) => {
+      // Deprecated: Use sendOTP + verifyOTP instead
+      // Keep for backward compatibility
       try {
         const response = await api.post('/auth/login', { phoneNumber });
         const { token, user } = response.data;
