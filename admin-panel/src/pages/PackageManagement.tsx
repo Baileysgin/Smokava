@@ -77,7 +77,7 @@ const PackageManagement = () => {
     try {
       setLoadingPackages(true);
       console.log('=== LOADING PACKAGES ===');
-      console.log('API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
+      console.log('API URL:', import.meta.env.VITE_API_URL || 'Not set (check VITE_API_URL env variable)');
       const token = localStorage.getItem('adminToken');
       console.log('Token exists:', !!token);
       console.log('Token length:', token?.length);

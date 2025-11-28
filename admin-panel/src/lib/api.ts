@@ -1,6 +1,49 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// Get API URL from environment variable
+// In production, VITE_API_URL must be set and must use HTTPS
+// In development, it should be set in .env.local
+const getApiUrl = (): string => {
+  // Try to get from import.meta.env first (build-time injection)
+  let apiUrl = import.meta.env.VITE_API_URL;
+
+  // Log for debugging
+  console.log('🔍 API URL Resolution:', {
+    'import.meta.env.VITE_API_URL': import.meta.env.VITE_API_URL,
+    'import.meta.env.MODE': import.meta.env.MODE,
+    'import.meta.env.PROD': import.meta.env.PROD,
+  });
+
+  // Fallback to default production URL if not set
+  if (!apiUrl || apiUrl === 'undefined') {
+    const isProduction = import.meta.env.MODE === 'production' || import.meta.env.PROD;
+    if (isProduction) {
+      console.warn('⚠️ VITE_API_URL not set in build, using production default');
+      apiUrl = 'https://api.smokava.com/api';
+    } else {
+      console.warn('⚠️ VITE_API_URL not set, using development fallback');
+      apiUrl = 'http://localhost:5000/api';
+    }
+  }
+
+  // Ensure API URL ends with /api
+  if (!apiUrl.endsWith('/api')) {
+    apiUrl = apiUrl.endsWith('/') ? apiUrl + 'api' : apiUrl + '/api';
+  }
+
+  // Warn if using HTTP in production
+  const isProduction = import.meta.env.MODE === 'production' || import.meta.env.PROD;
+  if (isProduction && apiUrl.startsWith('http://')) {
+    console.error('❌ ERROR: VITE_API_URL must use HTTPS in production!');
+    console.error('   Current value:', apiUrl);
+    throw new Error('VITE_API_URL must use HTTPS in production');
+  }
+
+  console.log('✅ Using API URL:', apiUrl);
+  return apiUrl;
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,

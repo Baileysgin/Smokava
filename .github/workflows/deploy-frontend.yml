@@ -1,0 +1,86 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Next.js app
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+        run: npm run build
+
+      - name: Prepare build for deployment
+        working-directory: ./frontend
+        run: |
+          mkdir -p /tmp/smokava-frontend-deploy
+          cp -r .next/standalone/* /tmp/smokava-frontend-deploy/
+          cp -r .next/static /tmp/smokava-frontend-deploy/.next/
+          cp -r public /tmp/smokava-frontend-deploy/
+
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "/tmp/smokava-frontend-deploy/*"
+          target: "/tmp/smokava-frontend-build"
+          rm: true
+
+      - name: Move build to production
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            # Create directory if it doesn't exist
+            sudo mkdir -p /var/www/smokava-frontend
+
+            # Backup current build
+            if [ -d /var/www/smokava-frontend/.next ]; then
+              sudo mv /var/www/smokava-frontend /var/www/smokava-frontend.backup.$(date +%Y%m%d_%H%M%S)
+            fi
+
+            # Move new build
+            sudo mv /tmp/smokava-frontend-build/* /var/www/smokava-frontend/
+
+            # Set permissions
+            sudo chown -R www-data:www-data /var/www/smokava-frontend
+            sudo chmod -R 755 /var/www/smokava-frontend
+
+            # Reload Nginx
+            sudo nginx -t && sudo systemctl reload nginx
+
+            # Cleanup
+            rm -rf /tmp/smokava-frontend-build
+
+            echo "✅ Frontend deployed successfully!"

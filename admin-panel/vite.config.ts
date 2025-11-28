@@ -29,8 +29,15 @@ export default defineConfig(({ mode }) => {
     define: {
       // Make VITE_ prefixed env vars available in the app
       // Use process.env.VITE_API_URL if available (Docker build), otherwise use env from loadEnv
+      // Always ensure it ends with /api and uses HTTPS in production
       'import.meta.env.VITE_API_URL': JSON.stringify(
-        process.env.VITE_API_URL || env.VITE_API_URL || 'https://api.smokava.com/api'
+        (() => {
+          const apiUrl = process.env.VITE_API_URL || env.VITE_API_URL || 'https://api.smokava.com/api';
+          // Ensure it ends with /api
+          const normalizedUrl = apiUrl.endsWith('/api') ? apiUrl : (apiUrl.endsWith('/') ? apiUrl + 'api' : apiUrl + '/api');
+          console.log('📦 Building with API URL:', normalizedUrl);
+          return normalizedUrl;
+        })()
       ),
     },
     build: {

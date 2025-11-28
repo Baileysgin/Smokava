@@ -6,8 +6,12 @@
     "dev": "npx concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "seed": "cd backend && node scripts/seed.js"
+    "install:all": "npm install && cd frontend && npm install && cd ../admin-panel && npm install && cd ../backend && npm install",
+    "seed": "cd backend && node scripts/seed.js",
+    "verify": "./scripts/verify-deployment.sh",
+    "build:frontend": "cd frontend && npm run build",
+    "build:admin": "cd admin-panel && npm run build",
+    "build:all": "npm run build:frontend && npm run build:admin"
   },
   "keywords": [],
   "author": "",

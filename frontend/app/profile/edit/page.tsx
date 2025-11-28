@@ -47,9 +47,9 @@ export default function ProfileEditPage() {
     try {
       // Dynamically import heic2any to avoid SSR issues
       const heic2any = await import('heic2any');
-      const convert = heic2any.default || heic2any.convert || (heic2any as any).default?.convert;
+      const convert = (heic2any as any).default || heic2any;
 
-      if (!convert) {
+      if (!convert || typeof convert !== 'function') {
         throw new Error('heic2any convert function not found');
       }
 

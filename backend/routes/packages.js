@@ -40,7 +40,7 @@ router.post('/purchase', auth, async (req, res) => {
     const paymentUrl = `${process.env.IPG_BASE_URL || 'https://payment.example.com'}/payment?` +
       `orderId=${userPackage._id}&` +
       `amount=${package.price}&` +
-      `callback=${encodeURIComponent(process.env.IPG_CALLBACK_URL || 'http://localhost:3000/packages/payment-callback')}`;
+      `callback=${encodeURIComponent(process.env.IPG_CALLBACK_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL + '/packages/payment-callback' : 'https://smokava.com/packages/payment-callback'))}`;
 
     res.json({
       paymentUrl,

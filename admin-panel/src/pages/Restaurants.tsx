@@ -112,7 +112,7 @@ const Restaurants = () => {
       title: 'وضعیت',
       key: 'status',
       render: (_: any, record: Restaurant) => {
-        const isActive = record.accepted || record.active || true;
+        const isActive = record.active !== false;
         return (
           <Tag color={isActive ? 'green' : 'red'}>
             {isActive ? 'فعال' : 'غیرفعال'}

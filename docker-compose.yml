@@ -73,11 +73,13 @@ services:
       context: ./admin-panel
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL:-https://api.smokava.com/api}
+        VITE_API_URL: ${VITE_API_URL:-https://api.smokava.com/api}
     container_name: smokava-admin-panel
     restart: unless-stopped
     ports:
       - "5173:80"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-https://api.smokava.com/api}
     depends_on:
       - backend
     networks:

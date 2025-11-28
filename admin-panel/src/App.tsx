@@ -1,31 +1,49 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import faIR from 'antd/locale/fa_IR';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Restaurants from './pages/Restaurants';
-import AddRestaurant from './pages/AddRestaurant';
-import EditRestaurant from './pages/EditRestaurant';
-import ConsumedPackages from './pages/ConsumedPackages';
-import SoldPackages from './pages/SoldPackages';
-import Users from './pages/Users';
-import UserDetails from './pages/UserDetails';
-import PackageManagement from './pages/PackageManagement';
-import Gifts from './pages/Gifts';
-import Ratings from './pages/Ratings';
 import { useAuthStore } from './store/authStore';
 import { useOperatorAuthStore } from './store/operatorAuthStore';
 import ProtectedRoute from './components/ProtectedRoute';
-import OperatorLogin from './pages/OperatorLogin';
 import OperatorLayout from './components/OperatorLayout';
 import OperatorProtectedRoute from './components/OperatorProtectedRoute';
-import OperatorDashboard from './pages/OperatorDashboard';
-import OperatorRedeem from './pages/OperatorRedeem';
-import OperatorHistory from './pages/OperatorHistory';
-import OperatorCustomers from './pages/OperatorCustomers';
-import OperatorRestaurant from './pages/OperatorRestaurant';
+
+// Login pages - load immediately (no lazy loading)
+import Login from './pages/Login';
+import OperatorLogin from './pages/OperatorLogin';
+
+// Lazy load all other pages for code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Restaurants = lazy(() => import('./pages/Restaurants'));
+const AddRestaurant = lazy(() => import('./pages/AddRestaurant'));
+const EditRestaurant = lazy(() => import('./pages/EditRestaurant'));
+const ConsumedPackages = lazy(() => import('./pages/ConsumedPackages'));
+const SoldPackages = lazy(() => import('./pages/SoldPackages'));
+const Users = lazy(() => import('./pages/Users'));
+const UserDetails = lazy(() => import('./pages/UserDetails'));
+const PackageManagement = lazy(() => import('./pages/PackageManagement'));
+const Gifts = lazy(() => import('./pages/Gifts'));
+const Ratings = lazy(() => import('./pages/Ratings'));
+const OperatorDashboard = lazy(() => import('./pages/OperatorDashboard'));
+const OperatorRedeem = lazy(() => import('./pages/OperatorRedeem'));
+const OperatorHistory = lazy(() => import('./pages/OperatorHistory'));
+const OperatorCustomers = lazy(() => import('./pages/OperatorCustomers'));
+const OperatorRestaurant = lazy(() => import('./pages/OperatorRestaurant'));
+
+// Loading component for lazy routes
+const PageLoader = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    fontSize: '16px',
+    color: '#666'
+  }}>
+    در حال بارگذاری...
+  </div>
+);
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -58,17 +76,61 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="restaurants" element={<Restaurants />} />
-            <Route path="restaurants/new" element={<AddRestaurant />} />
-            <Route path="restaurants/:id/edit" element={<EditRestaurant />} />
-            <Route path="consumed" element={<ConsumedPackages />} />
-            <Route path="sold-packages" element={<SoldPackages />} />
-            <Route path="users" element={<Users />} />
-            <Route path="users/:id" element={<UserDetails />} />
-            <Route path="package-management" element={<PackageManagement />} />
-            <Route path="gifts" element={<Gifts />} />
-            <Route path="ratings" element={<Ratings />} />
+            <Route index element={
+              <Suspense fallback={<PageLoader />}>
+                <Dashboard />
+              </Suspense>
+            } />
+            <Route path="restaurants" element={
+              <Suspense fallback={<PageLoader />}>
+                <Restaurants />
+              </Suspense>
+            } />
+            <Route path="restaurants/new" element={
+              <Suspense fallback={<PageLoader />}>
+                <AddRestaurant />
+              </Suspense>
+            } />
+            <Route path="restaurants/:id/edit" element={
+              <Suspense fallback={<PageLoader />}>
+                <EditRestaurant />
+              </Suspense>
+            } />
+            <Route path="consumed" element={
+              <Suspense fallback={<PageLoader />}>
+                <ConsumedPackages />
+              </Suspense>
+            } />
+            <Route path="sold-packages" element={
+              <Suspense fallback={<PageLoader />}>
+                <SoldPackages />
+              </Suspense>
+            } />
+            <Route path="users" element={
+              <Suspense fallback={<PageLoader />}>
+                <Users />
+              </Suspense>
+            } />
+            <Route path="users/:id" element={
+              <Suspense fallback={<PageLoader />}>
+                <UserDetails />
+              </Suspense>
+            } />
+            <Route path="package-management" element={
+              <Suspense fallback={<PageLoader />}>
+                <PackageManagement />
+              </Suspense>
+            } />
+            <Route path="gifts" element={
+              <Suspense fallback={<PageLoader />}>
+                <Gifts />
+              </Suspense>
+            } />
+            <Route path="ratings" element={
+              <Suspense fallback={<PageLoader />}>
+                <Ratings />
+              </Suspense>
+            } />
           </Route>
           <Route path="/operator/login" element={<OperatorLogin />} />
           <Route
@@ -79,11 +141,31 @@ function App() {
               </OperatorProtectedRoute>
             }
           >
-          <Route index element={<OperatorDashboard />} />
-          <Route path="redeem" element={<OperatorRedeem />} />
-          <Route path="history" element={<OperatorHistory />} />
-          <Route path="customers" element={<OperatorCustomers />} />
-          <Route path="restaurant" element={<OperatorRestaurant />} />
+          <Route index element={
+            <Suspense fallback={<PageLoader />}>
+              <OperatorDashboard />
+            </Suspense>
+          } />
+          <Route path="redeem" element={
+            <Suspense fallback={<PageLoader />}>
+              <OperatorRedeem />
+            </Suspense>
+          } />
+          <Route path="history" element={
+            <Suspense fallback={<PageLoader />}>
+              <OperatorHistory />
+            </Suspense>
+          } />
+          <Route path="customers" element={
+            <Suspense fallback={<PageLoader />}>
+              <OperatorCustomers />
+            </Suspense>
+          } />
+          <Route path="restaurant" element={
+            <Suspense fallback={<PageLoader />}>
+              <OperatorRestaurant />
+            </Suspense>
+          } />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

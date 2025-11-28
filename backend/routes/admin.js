@@ -9,6 +9,23 @@ const Package = require('../models/Package');
 const Rating = require('../models/Rating');
 const auth = require('../middleware/auth');
 
+// Simple in-memory cache for dashboard stats (5 minutes)
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getCached = (key) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+};
+
+const setCached = (key, data) => {
+  cache.set(key, { data, timestamp: Date.now() });
+};
+
 // Admin login
 router.post('/login', async (req, res) => {
   try {
@@ -72,9 +89,17 @@ const requireAdmin = (req, res, next) => {
   });
 };
 
-// Get dashboard statistics
+// Get dashboard statistics (with caching)
 router.get('/dashboard/stats', auth, requireAdmin, async (req, res) => {
   try {
+    const cacheKey = 'admin-dashboard-stats';
+
+    // Check cache first
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const totalUsers = await User.countDocuments();
     const totalRestaurants = await Restaurant.countDocuments();
     const totalPosts = await Post.countDocuments();
@@ -93,14 +118,19 @@ router.get('/dashboard/stats', auth, requireAdmin, async (req, res) => {
       createdAt: { $gte: sevenDaysAgo }
     });
 
-    res.json({
+    const stats = {
       totalUsers,
       totalRestaurants,
       totalPosts,
       totalPackages,
       totalConsumed,
       recentUsers
-    });
+    };
+
+    // Cache the result
+    setCached(cacheKey, stats);
+
+    res.json(stats);
   } catch (error) {
     console.error('Get dashboard stats error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -343,6 +373,7 @@ router.get('/consumed-packages', auth, requireAdmin, async (req, res) => {
 // Get all users (for admin)
 router.get('/users', auth, requireAdmin, async (req, res) => {
   try {
+    console.log('📊 GET /admin/users - Request received');
     const { page = 1, limit = 20 } = req.query;
 
     const users = await User.find()
@@ -353,6 +384,8 @@ router.get('/users', auth, requireAdmin, async (req, res) => {
 
     const total = await User.countDocuments();
 
+    console.log(`📊 GET /admin/users - Found ${users.length} users (total: ${total})`);
+
     res.json({
       users,
       total,
@@ -361,7 +394,8 @@ router.get('/users', auth, requireAdmin, async (req, res) => {
       totalPages: Math.ceil(total / limit)
     });
   } catch (error) {
-    console.error('Get users error:', error);
+    console.error('❌ Get users error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -470,6 +504,7 @@ router.patch('/users/:id/role', auth, requireAdmin, async (req, res) => {
 // Get sold packages
 router.get('/sold-packages', auth, requireAdmin, async (req, res) => {
   try {
+    console.log('📦 GET /admin/sold-packages - Request received');
     const { page = 1, limit = 20 } = req.query;
 
     const userPackages = await UserPackage.find()
@@ -480,6 +515,8 @@ router.get('/sold-packages', auth, requireAdmin, async (req, res) => {
       .skip((page - 1) * limit);
 
     const total = await UserPackage.countDocuments();
+
+    console.log(`📦 GET /admin/sold-packages - Found ${userPackages.length} packages (total: ${total})`);
 
     const packages = userPackages.map(pkg => ({
       _id: pkg._id,
@@ -499,7 +536,8 @@ router.get('/sold-packages', auth, requireAdmin, async (req, res) => {
       totalPages: Math.ceil(total / limit)
     });
   } catch (error) {
-    console.error('Get sold packages error:', error);
+    console.error('❌ Get sold packages error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

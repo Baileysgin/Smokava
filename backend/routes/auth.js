@@ -7,9 +7,11 @@ const { sendOTP, generateLoginOTP } = require('../services/kavenegar');
 // Send OTP to phone number
 router.post('/send-otp', async (req, res) => {
   try {
+    console.log('🔍 Send OTP request body:', JSON.stringify(req.body));
     const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
+      console.log('❌ Missing phoneNumber');
       return res.status(400).json({ message: 'Phone number is required' });
     }
 
@@ -40,29 +42,103 @@ router.post('/send-otp', async (req, res) => {
     user.otpExpiresAt = otpExpiresAt;
     await user.save();
 
-    // Send OTP via Kavenegar
-    await sendOTP(phoneNumber, otpCode);
-
-    res.json({
-      message: 'OTP sent successfully',
-      expiresIn: 300 // 5 minutes in seconds
+    console.log('✅ OTP saved to database:', {
+      phoneNumber,
+      otpCode,
+      expiresAt: otpExpiresAt
     });
+
+    // Send OTP via Kavenegar
+    // Always try to send SMS if credentials are available (regardless of NODE_ENV)
+    const hasKavenegarCredentials = process.env.KAVENEGAR_API_KEY && process.env.KAVENEGAR_TEMPLATE;
+    const isProduction = process.env.NODE_ENV === 'production';
+    let smsError = null;
+
+    if (hasKavenegarCredentials) {
+      // If credentials are available, always try to send SMS
+      try {
+        await sendOTP(phoneNumber, otpCode);
+        console.log('✅ SMS sent successfully to:', phoneNumber);
+      } catch (err) {
+        smsError = {
+          message: err.message,
+          code: err.code || 'SMS_SEND_FAILED'
+        };
+        console.error('❌ Failed to send SMS:', {
+          phoneNumber,
+          error: err.message,
+          stack: err.stack
+        });
+        // Still save OTP - user might be able to verify manually or via get-otp endpoint
+
+        // In development, also log OTP to console for debugging
+        if (!isProduction) {
+          console.log('\n📱 ============================================');
+          console.log('📱 OTP CODE (SMS Failed - Development Mode)');
+          console.log('📱 Phone Number:', phoneNumber);
+          console.log('📱 OTP Code:', otpCode);
+          console.log('📱 ============================================\n');
+        }
+      }
+    } else {
+      // No credentials - log OTP to console (development mode behavior)
+      if (!isProduction) {
+        console.log('\n📱 ============================================');
+        console.log('📱 OTP CODE (No Kavenegar Credentials)');
+        console.log('📱 Phone Number:', phoneNumber);
+        console.log('📱 OTP Code:', otpCode);
+        console.log('📱 ============================================\n');
+      } else {
+        console.warn('⚠️ Kavenegar credentials not configured - SMS not sent');
+        smsError = {
+          message: 'Kavenegar credentials not configured',
+          code: 'CONFIG_MISSING'
+        };
+      }
+    }
+
+    // Return response with error info if SMS failed
+    const response = {
+      message: smsError ? 'OTP generated but SMS failed to send' : 'OTP sent successfully',
+      expiresIn: 300, // 5 minutes in seconds
+      ...(smsError && { smsError, debugInfo: 'Check backend logs or use /api/auth/get-otp endpoint' })
+    };
+
+    // In development, include OTP in response for debugging
+    if (!isProduction) {
+      response.debugOtp = otpCode;
+      response.debugMessage = 'This OTP is included for development only';
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Send OTP error:', error);
     res.status(500).json({ message: 'Failed to send OTP', error: error.message });
   }
 });
 
-// Development endpoint to get OTP (only in development mode)
+// Endpoint to get OTP (for debugging - available in production with admin auth or secret key)
 router.get('/get-otp', async (req, res) => {
   try {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(403).json({ message: 'Not available in production' });
-    }
+    const { phoneNumber, secretKey } = req.query;
 
-    const { phoneNumber } = req.query;
     if (!phoneNumber) {
       return res.status(400).json({ message: 'Phone number is required' });
+    }
+
+    // In production, require secret key or admin auth
+    const isProduction = process.env.NODE_ENV === 'production';
+    const validSecretKey = process.env.OTP_DEBUG_SECRET_KEY;
+
+    if (isProduction) {
+      // Check if secret key is provided and valid
+      if (!secretKey || secretKey !== validSecretKey) {
+        console.warn('⚠️ Unauthorized OTP retrieval attempt:', { phoneNumber, hasSecretKey: !!secretKey });
+        return res.status(403).json({
+          message: 'Not available. Provide valid secretKey query parameter.',
+          hint: 'Set OTP_DEBUG_SECRET_KEY in backend/.env to enable this endpoint'
+        });
+      }
     }
 
     const user = await User.findOne({ phoneNumber });
@@ -72,12 +148,18 @@ router.get('/get-otp', async (req, res) => {
 
     // Check if OTP is expired
     if (user.otpExpiresAt && new Date() > user.otpExpiresAt) {
-      return res.status(400).json({ message: 'OTP has expired' });
+      return res.status(400).json({
+        message: 'OTP has expired',
+        expiresAt: user.otpExpiresAt
+      });
     }
+
+    console.log('📱 OTP retrieved for debugging:', { phoneNumber, otpCode: user.otpCode });
 
     res.json({
       otpCode: user.otpCode,
-      expiresAt: user.otpExpiresAt
+      expiresAt: user.otpExpiresAt,
+      expiresIn: Math.floor((user.otpExpiresAt - new Date()) / 1000)
     });
   } catch (error) {
     console.error('Get OTP error:', error);
@@ -88,14 +170,16 @@ router.get('/get-otp', async (req, res) => {
 // Verify OTP and login/register
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { phoneNumber, otpCode } = req.body;
+    console.log('🔍 Verify OTP request body:', JSON.stringify(req.body));
+    const { phoneNumber, code } = req.body;
 
-    if (!phoneNumber || !otpCode) {
-      return res.status(400).json({ message: 'Phone number and OTP code are required' });
+    if (!phoneNumber || !code) {
+      console.log('❌ Missing fields:', { phoneNumber: !!phoneNumber, code: !!code });
+      return res.status(400).json({ message: 'Phone number and code are required' });
     }
 
     // Development bypass: Allow test code 111111 for any phone number
-    const isTestCode = otpCode === '111111';
+    const isTestCode = code === '111111';
 
     if (isTestCode && process.env.NODE_ENV !== 'production') {
       console.log('🔓 Test OTP code 111111 used for:', phoneNumber);
@@ -115,27 +199,60 @@ router.post('/verify-otp', async (req, res) => {
     const user = await User.findOne({ phoneNumber });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found. Please request OTP first' });
+      console.log('❌ User not found:', phoneNumber);
+      return res.status(404).json({ message: 'Phone not found' });
     }
 
     // Check if OTP exists and is not expired
     if (!user.otpCode || !user.otpExpiresAt) {
+      console.log('❌ No OTP found:', {
+        phoneNumber,
+        hasOtpCode: !!user.otpCode,
+        hasOtpExpiresAt: !!user.otpExpiresAt
+      });
       return res.status(400).json({ message: 'No OTP found. Please request a new one' });
     }
 
-    if (new Date() > user.otpExpiresAt) {
-      return res.status(400).json({ message: 'OTP has expired. Please request a new one' });
+    const now = new Date();
+    if (now > user.otpExpiresAt) {
+      console.log('❌ OTP expired:', {
+        phoneNumber,
+        now: now.toISOString(),
+        expiresAt: user.otpExpiresAt.toISOString()
+      });
+      return res.status(400).json({ message: 'Expired code' });
     }
 
-    // Verify OTP code
-    if (user.otpCode !== otpCode) {
-      return res.status(400).json({ message: 'Invalid OTP code' });
+    // Verify OTP code (trim and convert to string for comparison)
+    const providedCode = String(code).trim();
+    const expectedCode = String(user.otpCode).trim();
+
+    if (providedCode !== expectedCode) {
+      console.log('❌ Invalid code:', {
+        phoneNumber,
+        provided: providedCode,
+        providedType: typeof providedCode,
+        providedLength: providedCode.length,
+        expected: expectedCode,
+        expectedType: typeof expectedCode,
+        expectedLength: expectedCode.length,
+        codesMatch: providedCode === expectedCode
+      });
+      return res.status(400).json({
+        message: 'Invalid code',
+        debug: process.env.NODE_ENV !== 'production' ? {
+          provided: providedCode,
+          expected: expectedCode
+        } : undefined
+      });
     }
 
     // Clear OTP after successful verification
     user.otpCode = null;
     user.otpExpiresAt = null;
     await user.save();
+
+    console.log('✅ OTP verified successfully for:', phoneNumber);
 
     // Generate auth token
     const token = user.generateAuthToken();

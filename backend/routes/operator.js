@@ -8,6 +8,23 @@ const Restaurant = require('../models/Restaurant');
 const Rating = require('../models/Rating');
 const { generateOTP } = require('../services/kavenegar');
 
+// Simple in-memory cache for operator dashboard (3 minutes)
+const cache = new Map();
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+const getCached = (key) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+};
+
+const setCached = (key, data) => {
+  cache.set(key, { data, timestamp: Date.now() });
+};
+
 // Redeem package using OTP (for restaurant operators)
 router.post('/redeem', requireOperator, async (req, res) => {
   try {
@@ -238,6 +255,13 @@ router.get('/history', requireOperator, async (req, res) => {
 router.get('/dashboard', requireOperator, async (req, res) => {
   try {
     const operatorRestaurantId = req.user.assignedRestaurant?._id || req.user.assignedRestaurant;
+    const cacheKey = `operator-dashboard-${operatorRestaurantId}`;
+
+    // Check cache first
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     // Get restaurant info
     const restaurant = await Restaurant.findById(operatorRestaurantId);
@@ -365,7 +389,7 @@ router.get('/dashboard', requireOperator, async (req, res) => {
       });
     }
 
-    res.json({
+    const dashboardData = {
       restaurant: {
         name: restaurant.nameFa,
         address: restaurant.addressFa,
@@ -382,7 +406,12 @@ router.get('/dashboard', requireOperator, async (req, res) => {
         chartData,
         recentRedemptions: last10Redemptions
       }
-    });
+    };
+
+    // Cache the result
+    setCached(cacheKey, dashboardData);
+
+    res.json(dashboardData);
   } catch (error) {
     console.error('Get operator dashboard error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

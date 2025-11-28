@@ -34,9 +34,11 @@ declare global {
 
 export default function AuthPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, telegramLogin } = useAuthStore();
+  const { sendOTP, verifyOTP, telegramLogin } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -89,16 +91,54 @@ export default function AuthPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await login(phoneNumber);
+      const response = await sendOTP(phoneNumber);
+
+      // Check if SMS failed but OTP was generated
+      if (response.smsError) {
+        setError(`⚠️ کد تایید تولید شد اما ارسال پیامک ناموفق بود: ${response.smsError.message || 'خطای نامشخص'}. ${response.debugInfo || ''}`);
+        // Still proceed to OTP step - user can use debug endpoint or check logs
+        setStep('otp');
+      } else {
+        setStep('otp');
+        setError('');
+      }
+
+      // In development, show OTP in console
+      if (response.debugOtp) {
+        console.log('🔐 Development OTP:', response.debugOtp);
+        console.log('📱 Phone:', phoneNumber);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطایی در ارسال کد تایید رخ داد');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await verifyOTP(phoneNumber, code);
       router.push('/packages');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطایی رخ داد');
+      const errorMsg = err.message || err.response?.data?.message || 'کد تایید نامعتبر است';
+      // Map English errors to Persian
+      const errorMap: { [key: string]: string } = {
+        'Invalid code': 'کد تایید نامعتبر است',
+        'Expired code': 'کد تایید منقضی شده است',
+        'Phone not found': 'شماره تلفن یافت نشد',
+        'No OTP found. Please request a new one': 'کد تایید یافت نشد. لطفا دوباره درخواست دهید'
+      };
+      setError(errorMap[errorMsg] || errorMsg);
     } finally {
       setLoading(false);
     }
@@ -113,40 +153,98 @@ export default function AuthPage() {
           <p className="text-gray-400 text-sm">شماره موبایل خود را وارد کنید</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-accent-500" />
-              شماره موبایل را وارد کنید
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="09123456789"
-              className="input bg-dark-200 border-accent-500/20 focus:border-accent-500"
-              required
-              dir="ltr"
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-500/20 border border-red-500 text-red-400 rounded-xl p-3 text-sm flex items-center gap-2">
-              <span>⚠️</span>
-              {error}
+        {step === 'phone' ? (
+          <form onSubmit={handlePhoneSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
+                <Phone className="w-4 h-4 text-accent-500" />
+                شماره موبایل را وارد کنید
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="09123456789"
+                className="input bg-dark-200 border-accent-500/20 focus:border-accent-500"
+                required
+                dir="ltr"
+                disabled={loading}
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-l from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-500 text-white rounded-xl py-4 font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-accent-500/20"
-          >
-            <LogIn className="w-5 h-5" />
-            {loading ? 'در حال ورود...' : 'ورود / ثبت‌نام'}
-          </button>
-        </form>
+            {error && (
+              <div className="bg-red-500/20 border border-red-500 text-red-400 rounded-xl p-3 text-sm flex items-center gap-2">
+                <span>⚠️</span>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-l from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-500 text-white rounded-xl py-4 font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-accent-500/20"
+            >
+              <LogIn className="w-5 h-5" />
+              {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleOTPSubmit} className="space-y-6">
+            <div>
+              <p className="text-sm text-gray-400 mb-4 text-center">
+                کد تایید به شماره {phoneNumber} ارسال شد
+              </p>
+              <label htmlFor="otp" className="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
+                <span>🔐</span>
+                کد تایید را وارد کنید
+              </label>
+              <input
+                id="otp"
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                className="input bg-dark-200 border-accent-500/20 focus:border-accent-500 text-center text-2xl tracking-widest"
+                required
+                dir="ltr"
+                maxLength={6}
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-500/20 border border-red-500 text-red-400 rounded-xl p-3 text-sm flex items-center gap-2">
+                <span>⚠️</span>
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('phone');
+                  setCode('');
+                  setError('');
+                }}
+                disabled={loading}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white rounded-xl py-4 font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                بازگشت
+              </button>
+              <button
+                type="submit"
+                disabled={loading || code.length !== 6}
+                className="flex-1 bg-gradient-to-l from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-500 text-white rounded-xl py-4 font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-accent-500/20"
+              >
+                <LogIn className="w-5 h-5" />
+                {loading ? 'در حال ورود...' : 'تایید و ورود'}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Telegram Login Button */}
         {typeof window !== 'undefined' && window.Telegram?.WebApp && (

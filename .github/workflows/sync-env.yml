@@ -1,0 +1,63 @@
+name: Sync Environment Variables
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'env.example'
+      - '.github/workflows/sync-env.yml'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync environment files
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /opt/smokava
+
+            # Pull latest env.example
+            git pull origin main
+
+            # Update backend .env if needed (only add missing variables, don't overwrite existing)
+            if [ -f backend/.env ]; then
+              echo "✅ Backend .env exists, preserving existing values"
+            else
+              echo "⚠️  Creating backend/.env from example"
+              cp env.example backend/.env
+              echo "⚠️  Please update backend/.env with your actual values!"
+            fi
+
+            # Update frontend .env.production if needed
+            if [ -f frontend/.env.production ]; then
+              echo "✅ Frontend .env.production exists, preserving existing values"
+            else
+              echo "⚠️  Creating frontend/.env.production from example"
+              cat > frontend/.env.production << EOF
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_MAPBOX_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+            EOF
+            fi
+
+            # Update admin-panel .env.production if needed
+            if [ -f admin-panel/.env.production ]; then
+              echo "✅ Admin panel .env.production exists, preserving existing values"
+            else
+              echo "⚠️  Creating admin-panel/.env.production from example"
+              cat > admin-panel/.env.production << EOF
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            EOF
+            fi
+
+            echo "✅ Environment files synced!"

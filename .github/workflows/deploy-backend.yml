@@ -1,0 +1,73 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /opt/smokava
+
+            # Pull latest changes
+            git pull origin main
+
+            # Install/update dependencies
+            cd backend
+            npm ci --production
+
+            # Copy environment file if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "⚠️  .env file not found! Creating from example..."
+              cp ../env.example .env || true
+              echo "⚠️  Please update backend/.env with your actual values!"
+            fi
+
+            # Restart PM2 process
+            pm2 restart smokava-backend || pm2 start ecosystem.config.js --only smokava-backend
+
+            # Save PM2 process list
+            pm2 save
+
+            echo "✅ Backend deployed successfully!"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            sleep 5
+            pm2 status smokava-backend
+            curl -f http://localhost:5000/ || exit 1

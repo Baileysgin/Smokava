@@ -21,8 +21,8 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   following: User[];
-  sendOTP: (phoneNumber: string) => Promise<{ 
-    message: string; 
+  sendOTP: (phoneNumber: string) => Promise<{
+    message: string;
     expiresIn: number;
     smsError?: { message: string };
     debugInfo?: string;

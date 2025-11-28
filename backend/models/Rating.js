@@ -48,3 +48,4 @@ ratingSchema.index({ userId: 1, redeemLogId: 1 }, { unique: true }); // One rati
 module.exports = mongoose.model('Rating', ratingSchema);
 
 
+
