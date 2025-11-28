@@ -32,9 +32,14 @@ services:
       - PORT=5000
       - MONGODB_URI=mongodb://mongodb:27017/smokava
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
-      - KAVENEGAR_API_KEY=${KAVENEGAR_API_KEY:-}
-      - KAVENEGAR_TEMPLATE=${KAVENEGAR_TEMPLATE:-}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:80}
+      - KAVENEGAR_API_KEY=${KAVENEGAR_API_KEY:-4D555572645075637678686F684E4154317157364C41666C636D2F657679556846326A4B384868704179383D}
+      - KAVENEGAR_TEMPLATE=${KAVENEGAR_TEMPLATE:-otp-v2}
+      - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
+      - API_BASE_URL=${API_BASE_URL:-https://api.smokava.com}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://smokava.com,https://www.smokava.com,https://admin.smokava.com}
+      - FRONTEND_URL=${FRONTEND_URL:-https://smokava.com}
+      - ADMIN_PANEL_URL=${ADMIN_PANEL_URL:-https://admin.smokava.com}
+      - OTP_DEBUG_SECRET_KEY=${OTP_DEBUG_SECRET_KEY:-smokava-otp-debug-2024}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -48,13 +53,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.smokava.com/api}
     container_name: smokava-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.smokava.com/api}
       - NEXT_PUBLIC_MAPBOX_TOKEN=${NEXT_PUBLIC_MAPBOX_TOKEN:-}
     depends_on:
       - backend
@@ -65,12 +72,12 @@ services:
     build:
       context: ./admin-panel
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-https://api.smokava.com/api}
     container_name: smokava-admin-panel
     restart: unless-stopped
     ports:
       - "5173:80"
-    environment:
-      - VITE_API_URL=http://localhost:5000/api
     depends_on:
       - backend
     networks:

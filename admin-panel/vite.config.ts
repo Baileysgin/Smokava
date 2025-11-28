@@ -28,7 +28,10 @@ export default defineConfig(({ mode }) => {
     ].filter(Boolean),
     define: {
       // Make VITE_ prefixed env vars available in the app
-      'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL),
+      // Use process.env.VITE_API_URL if available (Docker build), otherwise use env from loadEnv
+      'import.meta.env.VITE_API_URL': JSON.stringify(
+        process.env.VITE_API_URL || env.VITE_API_URL || 'https://api.smokava.com/api'
+      ),
     },
     build: {
       // Enable minification (esbuild is faster than terser)
@@ -40,32 +43,42 @@ export default defineConfig(({ mode }) => {
       // Code splitting and chunk optimization
       rollupOptions: {
         output: {
-          // Manual chunk splitting - put ALL React dependencies together
+          // Manual chunk splitting - ensure React loads FIRST
+          // Put ALL node_modules in react-vendor except truly independent utils
           manualChunks: (id) => {
             if (id.includes('node_modules')) {
-              // ALL React-related code in one chunk - ensures React loads first
+              // Put ALL React and React-dependent packages in react-vendor
               if (
                 id.includes('react') ||
                 id.includes('react-dom') ||
                 id.includes('react-router') ||
-                id.includes('scheduler')
+                id.includes('scheduler') ||
+                id.includes('antd') ||
+                id.includes('rc-') ||
+                id.includes('recharts') ||
+                id.includes('@ant-design') ||
+                id.includes('@rc-') ||
+                id.includes('@babel') ||
+                id.includes('@emotion') ||
+                id.includes('@mui') ||
+                id.includes('clsx') ||
+                id.includes('classnames')
               ) {
                 return 'react-vendor';
               }
-              // Antd depends on React
-              if (id.includes('antd')) {
-                return 'antd';
-              }
-              // Charts depends on React
-              if (id.includes('recharts')) {
-                return 'charts';
-              }
-              // Utils (no React dependency)
-              if (id.includes('axios') || id.includes('zustand') || id.includes('dayjs')) {
+              // Only truly independent utilities in separate chunks
+              if (id.includes('axios')) {
                 return 'utils';
               }
-              // Other vendor code (should not depend on React)
-              return 'vendor';
+              if (id.includes('zustand')) {
+                return 'utils';
+              }
+              if (id.includes('dayjs')) {
+                return 'utils';
+              }
+              // Everything else - put in react-vendor to be safe
+              // This ensures no code tries to access React before it's loaded
+              return 'react-vendor';
             }
           },
           // Optimize chunk file names
