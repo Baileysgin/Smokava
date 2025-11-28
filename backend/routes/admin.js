@@ -581,19 +581,35 @@ router.get('/packages', auth, requireAdmin, async (req, res) => {
 // Get package by ID
 router.get('/package/:id', auth, requireAdmin, async (req, res) => {
   try {
+    console.log('📦 GET /admin/package/:id - Request received for package:', req.params.id);
     const package = await Package.findById(req.params.id);
 
     if (!package) {
+      console.log('❌ Package not found:', req.params.id);
       return res.status(404).json({ message: 'Package not found' });
     }
 
     const pkgObj = package.toObject ? package.toObject() : package;
-    res.json({
+    
+    // Log the feature fields to debug
+    console.log('📦 Package loaded:', {
+      _id: pkgObj._id,
+      nameFa: pkgObj.nameFa,
+      feature_usage_fa: pkgObj.feature_usage_fa,
+      feature_validity_fa: pkgObj.feature_validity_fa,
+      feature_support_fa: pkgObj.feature_support_fa,
+    });
+    
+    const response = {
       ...pkgObj,
       _id: package._id.toString()
-    });
+    };
+    
+    console.log('📦 Sending package response with', Object.keys(response).length, 'fields');
+    res.json(response);
   } catch (error) {
-    console.error('Get package by ID error:', error);
+    console.error('❌ Get package by ID error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -677,16 +693,20 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       package.price_per_item_fa = price_per_item_fa;
     }
 
-    if (feature_usage_fa !== undefined) {
-      package.feature_usage_fa = feature_usage_fa;
+    // Update feature fields - accept empty strings too
+    if (feature_usage_fa !== undefined && feature_usage_fa !== null) {
+      package.feature_usage_fa = feature_usage_fa || '';
+      console.log('✅ Updated feature_usage_fa:', package.feature_usage_fa);
     }
 
-    if (feature_validity_fa !== undefined) {
-      package.feature_validity_fa = feature_validity_fa;
+    if (feature_validity_fa !== undefined && feature_validity_fa !== null) {
+      package.feature_validity_fa = feature_validity_fa || '';
+      console.log('✅ Updated feature_validity_fa:', package.feature_validity_fa);
     }
 
-    if (feature_support_fa !== undefined) {
-      package.feature_support_fa = feature_support_fa;
+    if (feature_support_fa !== undefined && feature_support_fa !== null) {
+      package.feature_support_fa = feature_support_fa || '';
+      console.log('✅ Updated feature_support_fa:', package.feature_support_fa);
     }
 
     if (package_icon !== undefined) {
@@ -695,7 +715,18 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
 
     await package.save();
 
-    const pkgObj = package.toObject ? package.toObject() : package;
+    // Reload from database to ensure all fields are included
+    const savedPackage = await Package.findById(package._id);
+    const pkgObj = savedPackage.toObject ? savedPackage.toObject() : savedPackage;
+    
+    console.log('💾 Package saved successfully:', {
+      _id: pkgObj._id,
+      nameFa: pkgObj.nameFa,
+      feature_usage_fa: pkgObj.feature_usage_fa,
+      feature_validity_fa: pkgObj.feature_validity_fa,
+      feature_support_fa: pkgObj.feature_support_fa,
+    });
+    
     res.json({
       ...pkgObj,
       _id: package._id.toString()
