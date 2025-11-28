@@ -10,8 +10,9 @@ interface LogoProps {
 // Logo file formats to try (in order)
 // Will try all common variations and case-insensitive matches
 const LOGO_FORMATS = [
+  '/logo-icon.svg',  // Try SVG first (exists in public folder)
+  '/logo.svg',       // Fallback to logo.svg
   '/logo-icon.webp',
-  '/logo-icon.svg',
   '/logo-icon.png',
   '/logo.webp',
   '/logo.svg',
