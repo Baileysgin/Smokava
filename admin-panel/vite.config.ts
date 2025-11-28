@@ -40,25 +40,23 @@ export default defineConfig(({ mode }) => {
       // Code splitting and chunk optimization
       rollupOptions: {
         output: {
-          // Manual chunk splitting for better caching
+          // Manual chunk splitting - put ALL React dependencies together
           manualChunks: (id) => {
-            // Vendor chunks - order matters for dependency resolution
             if (id.includes('node_modules')) {
-              // All React-related packages must be in react-vendor to ensure React loads first
-              // This includes React, React DOM, React Router, and any React-dependent utilities
+              // ALL React-related code in one chunk - ensures React loads first
               if (
                 id.includes('react') ||
-                id.includes('react-router') ||
                 id.includes('react-dom') ||
+                id.includes('react-router') ||
                 id.includes('scheduler')
               ) {
                 return 'react-vendor';
               }
-              // Antd can be separate but depends on React (will load after react-vendor)
+              // Antd depends on React
               if (id.includes('antd')) {
                 return 'antd';
               }
-              // Charts (depends on React, will load after react-vendor)
+              // Charts depends on React
               if (id.includes('recharts')) {
                 return 'charts';
               }
@@ -66,7 +64,7 @@ export default defineConfig(({ mode }) => {
               if (id.includes('axios') || id.includes('zustand') || id.includes('dayjs')) {
                 return 'utils';
               }
-              // Other node_modules (must not depend on React)
+              // Other vendor code (should not depend on React)
               return 'vendor';
             }
           },
