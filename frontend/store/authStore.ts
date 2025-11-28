@@ -21,7 +21,13 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   following: User[];
-  sendOTP: (phoneNumber: string) => Promise<{ message: string; expiresIn: number }>;
+  sendOTP: (phoneNumber: string) => Promise<{ 
+    message: string; 
+    expiresIn: number;
+    smsError?: { message: string };
+    debugInfo?: string;
+    debugOtp?: string;
+  }>;
   verifyOTP: (phoneNumber: string, code: string) => Promise<{ token: string; user: User }>;
   login: (phoneNumber: string) => Promise<void>;
   telegramLogin: (telegramData: any) => Promise<void>;
