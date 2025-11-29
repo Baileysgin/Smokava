@@ -60,14 +60,37 @@ api.interceptors.request.use((config) => {
     return config;
   }
 
-  // Check for operator token first, then admin token
-  const operatorToken = localStorage.getItem('operatorToken');
-  const adminToken = localStorage.getItem('adminToken');
-  const token = operatorToken || adminToken;
+  // For admin routes, ONLY use adminToken (never operatorToken)
+  // For operator routes, use operatorToken
+  let token = null;
+  if (config.url?.includes('/admin/')) {
+    // Admin routes - only use admin token
+    token = localStorage.getItem('adminToken');
+    if (!token) {
+      console.warn('⚠️ No adminToken found for admin route:', config.url);
+    } else {
+      console.log('🔑 Using adminToken for admin route:', config.url, 'Token length:', token.length);
+    }
+  } else if (config.url?.includes('/operator/')) {
+    // Operator routes - use operator token
+    token = localStorage.getItem('operatorToken');
+    if (!token) {
+      console.warn('⚠️ No operatorToken found for operator route:', config.url);
+    } else {
+      console.log('🔑 Using operatorToken for operator route:', config.url);
+    }
+  } else {
+    // Other routes - try admin first, then operator
+    const adminToken = localStorage.getItem('adminToken');
+    const operatorToken = localStorage.getItem('operatorToken');
+    token = adminToken || operatorToken;
+    if (token) {
+      console.log('🔑 Using token for route:', config.url, 'Token type:', adminToken ? 'admin' : 'operator');
+    }
+  }
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.log('🔑 Adding token to request:', config.url, 'Token length:', token.length);
   } else {
     console.warn('⚠️ No token found in localStorage for request:', config.url);
   }
