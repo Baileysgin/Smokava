@@ -95,9 +95,9 @@ async function sendOTP(phoneNumber, token) {
       const errorMsg = response.data?.return?.message || 'Unknown Kavenegar error';
       const errorCode = response.data?.return?.status;
 
-      // If lookup.json requires premium (error 426), fallback to basic SMS send
-      if (errorCode === 426) {
-        console.log('⚠️  lookup.json requires premium service (error 426), falling back to basic SMS send...');
+      // If lookup.json requires premium (error 426) or method not found (404), fallback to basic SMS send
+      if (errorCode === 426 || errorCode === 404) {
+        console.log(`⚠️  lookup.json not available (error ${errorCode}), falling back to basic SMS send...`);
 
         // Fallback to basic SMS send endpoint (works with all Kavenegar plans)
         const sendUrl = `https://api.kavenegar.com/v1/${apiKey}/sms/send.json`;
