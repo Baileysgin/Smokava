@@ -590,7 +590,7 @@ router.get('/package/:id', auth, requireAdmin, async (req, res) => {
     }
 
     const pkgObj = package.toObject ? package.toObject() : package;
-    
+
     // Log the feature fields to debug
     console.log('📦 Package loaded:', {
       _id: pkgObj._id,
@@ -599,12 +599,12 @@ router.get('/package/:id', auth, requireAdmin, async (req, res) => {
       feature_validity_fa: pkgObj.feature_validity_fa,
       feature_support_fa: pkgObj.feature_support_fa,
     });
-    
+
     const response = {
       ...pkgObj,
       _id: package._id.toString()
     };
-    
+
     console.log('📦 Sending package response with', Object.keys(response).length, 'fields');
     res.json(response);
   } catch (error) {
@@ -718,7 +718,7 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
     // Reload from database to ensure all fields are included
     const savedPackage = await Package.findById(package._id);
     const pkgObj = savedPackage.toObject ? savedPackage.toObject() : savedPackage;
-    
+
     console.log('💾 Package saved successfully:', {
       _id: pkgObj._id,
       nameFa: pkgObj.nameFa,
@@ -726,7 +726,7 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       feature_validity_fa: pkgObj.feature_validity_fa,
       feature_support_fa: pkgObj.feature_support_fa,
     });
-    
+
     res.json({
       ...pkgObj,
       _id: package._id.toString()
