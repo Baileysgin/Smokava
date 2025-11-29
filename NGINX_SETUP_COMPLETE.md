@@ -120,3 +120,4 @@ sudo tail -f /var/log/nginx/error.log
 
 **Your project should be accessible via smokava.com once DNS propagates!**
 
+

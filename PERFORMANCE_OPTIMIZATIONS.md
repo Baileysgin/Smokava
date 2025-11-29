@@ -190,3 +190,4 @@ In browser DevTools:
 3. Implement service worker for offline caching
 4. Add database indexes for slow queries
 
+

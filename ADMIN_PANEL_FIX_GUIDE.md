@@ -241,4 +241,3 @@ If issues persist:
 2. Check admin panel logs: `docker compose logs admin-panel`
 3. Check browser console for client-side errors
 4. Verify network requests in browser DevTools Network tab
-

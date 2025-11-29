@@ -123,4 +123,3 @@ git checkout HEAD~1 admin-panel/package.json admin-panel/package-lock.json
 docker compose build --no-cache admin-panel
 docker compose up -d admin-panel
 ```
-

@@ -57,4 +57,3 @@ docker run -d --name smokava-admin-panel \
 ✅ React loads before vendor bundle
 ✅ No "Cannot read properties of undefined" error
 ✅ Admin panel loads correctly
-

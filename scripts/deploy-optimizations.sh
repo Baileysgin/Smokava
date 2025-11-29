@@ -61,3 +61,4 @@ echo "🧪 Test the optimizations:"
 echo "   curl -H 'Accept-Encoding: gzip' -I http://admin.smokava.com"
 echo "   curl -H 'Accept-Encoding: gzip' -I http://api.smokava.com"
 
+

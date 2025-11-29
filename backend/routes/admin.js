@@ -957,4 +957,51 @@ router.get('/ratings/analytics', auth, requireAdmin, async (req, res) => {
   }
 });
 
+// Activate package for a user (Admin only)
+router.post('/activate-package', auth, requireAdmin, async (req, res) => {
+  try {
+    const { userId, packageId } = req.body;
+
+    if (!userId || !packageId) {
+      return res.status(400).json({ message: 'User ID and Package ID are required' });
+    }
+
+    // Verify user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify package exists
+    const package = await Package.findById(packageId);
+    if (!package) {
+      return res.status(404).json({ message: 'Package not found' });
+    }
+
+    // Create user package
+    const userPackage = new UserPackage({
+      user: userId,
+      package: packageId,
+      totalCount: package.count,
+      remainingCount: package.count,
+      status: 'active',
+      purchasedAt: new Date()
+    });
+
+    await userPackage.save();
+    await userPackage.populate('package', 'name nameFa count price');
+    await userPackage.populate('user', 'phoneNumber firstName lastName');
+
+    console.log(`✅ Admin activated package ${packageId} for user ${userId}`);
+
+    res.json({
+      message: 'Package activated successfully',
+      userPackage
+    });
+  } catch (error) {
+    console.error('Activate package error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

@@ -71,3 +71,4 @@ The browser was getting `ERR_EMPTY_RESPONSE` when sending OTP because:
 
 Try it now - the "ارسال کد تایید" button should respond immediately without timeout errors.
 
+

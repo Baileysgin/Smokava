@@ -65,3 +65,4 @@ echo "      - Register a sender number in Kavenegar panel"
 echo "      - Or upgrade to premium plan to use lookup.json"
 echo ""
 
+

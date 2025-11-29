@@ -63,4 +63,3 @@ echo "📋 Next steps:"
 echo "1. Check admin panel at: https://admin.smokava.com"
 echo "2. Verify API calls in browser console"
 echo "3. Test login and data loading"
-

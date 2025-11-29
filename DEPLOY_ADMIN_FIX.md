@@ -107,4 +107,3 @@ docker exec smokava-backend npm run seed
 ---
 
 **Ready to deploy!** Run the fix script and the admin panel should start loading data correctly. 🎉
-

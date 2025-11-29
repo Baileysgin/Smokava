@@ -112,3 +112,4 @@ Check browser DevTools Network tab:
 
 **Your admin panel is now significantly faster!** 🚀
 
+

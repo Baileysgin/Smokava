@@ -223,3 +223,4 @@ curl "https://api.kavenegar.com/v1/YOUR_API_KEY/verify/lookup.json?receptor=0930
 - **Get OTP endpoint** should only be used for debugging, not in production user flows
 - In production, consider restricting `/get-otp` endpoint to admin IPs only
 
+

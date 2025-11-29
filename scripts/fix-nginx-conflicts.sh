@@ -90,3 +90,4 @@ echo "📋 Test the API:"
 echo "   curl https://api.smokava.com/"
 echo "   curl -X POST https://api.smokava.com/api/auth/send-otp -H 'Content-Type: application/json' -d '{\"phoneNumber\":\"09302593819\"}'"
 
+

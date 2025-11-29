@@ -72,3 +72,4 @@ jobs:
             pm2 status smokava-backend
             curl -f http://localhost:5000/ || exit 1
 
+

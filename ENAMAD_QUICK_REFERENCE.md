@@ -106,3 +106,4 @@ sudo certbot --nginx -d smokava.com -d www.smokava.com
 
 For detailed instructions, see: `ENAMAD_VERIFICATION_SETUP.md`
 
+

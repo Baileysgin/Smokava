@@ -11,7 +11,7 @@ const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    
+
     console.log('🔍 Auth middleware - Decoded token:', {
       hasRole: !!decoded.role,
       role: decoded.role,

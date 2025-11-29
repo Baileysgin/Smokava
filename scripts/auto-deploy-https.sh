@@ -187,3 +187,4 @@ echo "📋 To check status:"
 echo "   ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'cd $DEPLOY_DIR && docker-compose ps'"
 echo ""
 
+

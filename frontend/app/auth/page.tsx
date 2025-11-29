@@ -124,12 +124,12 @@ export default function AuthPage() {
 
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent duplicate submissions
     if (isVerifying || loading) {
       return;
     }
-    
+
     setError('');
     setLoading(true);
     setIsVerifying(true);

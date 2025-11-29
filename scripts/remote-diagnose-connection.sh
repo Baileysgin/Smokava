@@ -56,3 +56,4 @@ echo "   1. Check backend logs: ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'doc
 echo "   2. Check Nginx logs: ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'sudo tail -f /var/log/nginx/error.log'"
 echo "   3. Test API: curl -X POST https://api.smokava.com/api/auth/send-otp -H 'Content-Type: application/json' -d '{\"phoneNumber\":\"09302593819\"}'"
 
+

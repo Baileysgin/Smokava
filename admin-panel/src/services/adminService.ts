@@ -115,4 +115,13 @@ export const adminService = {
   deletePackage: async (id: string): Promise<void> => {
     await api.delete(`/admin/package/${id}`);
   },
+
+  // Activate Package
+  activatePackage: async (userId: string, packageId: string): Promise<any> => {
+    const response = await api.post('/admin/activate-package', {
+      userId,
+      packageId,
+    });
+    return response.data;
+  },
 };

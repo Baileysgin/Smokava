@@ -54,3 +54,4 @@ KAVENEGAR_SENDER=your-sender-number-here
 
 پس از دریافت شماره فرستنده یا فعال‌سازی سرویس پیشرفته، SMS ارسال خواهد شد.
 
+

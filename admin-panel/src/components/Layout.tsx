@@ -10,6 +10,7 @@ import {
   AppstoreOutlined,
   GiftOutlined,
   StarOutlined,
+  PlusCircleOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
 
@@ -50,6 +51,11 @@ const Layout = () => {
       key: '/package-management',
       icon: <AppstoreOutlined />,
       label: 'مدیریت پکیج',
+    },
+    {
+      key: '/activate-package',
+      icon: <PlusCircleOutlined />,
+      label: 'فعال‌سازی پکیج',
     },
     {
       key: '/gifts',

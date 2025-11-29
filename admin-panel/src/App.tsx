@@ -23,6 +23,7 @@ const SoldPackages = lazy(() => import('./pages/SoldPackages'));
 const Users = lazy(() => import('./pages/Users'));
 const UserDetails = lazy(() => import('./pages/UserDetails'));
 const PackageManagement = lazy(() => import('./pages/PackageManagement'));
+const ActivatePackage = lazy(() => import('./pages/ActivatePackage'));
 const Gifts = lazy(() => import('./pages/Gifts'));
 const Ratings = lazy(() => import('./pages/Ratings'));
 const OperatorDashboard = lazy(() => import('./pages/OperatorDashboard'));
@@ -119,6 +120,11 @@ function App() {
             <Route path="package-management" element={
               <Suspense fallback={<PageLoader />}>
                 <PackageManagement />
+              </Suspense>
+            } />
+            <Route path="activate-package" element={
+              <Suspense fallback={<PageLoader />}>
+                <ActivatePackage />
               </Suspense>
             } />
             <Route path="gifts" element={

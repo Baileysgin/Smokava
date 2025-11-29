@@ -172,3 +172,4 @@ This checks:
 - Environment variables are used correctly
 - `.env.example` files exist
 
+

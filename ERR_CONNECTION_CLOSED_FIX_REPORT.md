@@ -199,3 +199,4 @@ curl -X POST https://api.smokava.com/api/auth/send-otp \
 
 ✅ **Status**: **FIXED** - The `ERR_CONNECTION_CLOSED` error is resolved. The API is now accessible and the OTP system is fully functional.
 
+
