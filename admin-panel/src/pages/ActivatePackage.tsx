@@ -67,7 +67,7 @@ const ActivatePackage = () => {
   const handleActivate = async (values: { userId: string; packageId: string }) => {
     try {
       setLoading(true);
-      const result = await adminService.activatePackage(values.userId, values.packageId);
+      await adminService.activatePackage(values.userId, values.packageId);
       message.success('پکیج با موفقیت برای کاربر فعال شد');
       form.resetFields();
       
