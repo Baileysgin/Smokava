@@ -70,7 +70,7 @@ const ActivatePackage = () => {
       await adminService.activatePackage(values.userId, values.packageId);
       message.success('پکیج با موفقیت برای کاربر فعال شد');
       form.resetFields();
-      
+
       // Reload users to show updated package count
       await loadUsers();
     } catch (error: any) {
@@ -88,9 +88,6 @@ const ActivatePackage = () => {
       dataIndex: 'name',
       key: 'name',
       render: (_: any, record: User) => {
-        if (record.firstName && record.lastName) {
-          return `${record.firstName} ${record.lastName}`;
-        }
         return record.name || record.phoneNumber || 'بدون نام';
       },
     },
@@ -98,13 +95,6 @@ const ActivatePackage = () => {
       title: 'شماره تلفن',
       dataIndex: 'phoneNumber',
       key: 'phoneNumber',
-    },
-    {
-      title: 'تعداد پکیج‌ها',
-      key: 'packages',
-      render: (_: any, record: User) => {
-        return record.packages?.length || 0;
-      },
     },
   ];
 
@@ -134,17 +124,13 @@ const ActivatePackage = () => {
                 return (
                   user?.phoneNumber?.includes(searchText) ||
                   user?.name?.toLowerCase().includes(searchText) ||
-                  user?.firstName?.toLowerCase().includes(searchText) ||
-                  user?.lastName?.toLowerCase().includes(searchText) ||
                   false
                 );
               }}
             >
               {users.map((user) => (
                 <Select.Option key={user._id} value={user._id}>
-                  {user.firstName && user.lastName
-                    ? `${user.firstName} ${user.lastName} - ${user.phoneNumber}`
-                    : user.name
+                  {user.name
                     ? `${user.name} - ${user.phoneNumber}`
                     : user.phoneNumber}
                 </Select.Option>
@@ -216,4 +202,3 @@ const ActivatePackage = () => {
 };
 
 export default ActivatePackage;
-
