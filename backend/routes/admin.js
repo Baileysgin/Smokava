@@ -67,25 +67,35 @@ router.post('/login', async (req, res) => {
 
 // Middleware to check if user is admin
 const requireAdmin = (req, res, next) => {
-  console.log('requireAdmin check - req.user:', req.user ? { id: req.user._id, role: req.user.role } : 'none');
+  console.log('requireAdmin check - req.user:', req.user ? { id: req.user._id, role: req.user.role, hasRole: !!req.user.role } : 'none');
+  console.log('requireAdmin - req.headers.authorization:', req.headers.authorization ? 'present' : 'missing');
+
+  // Check if user is authenticated first
+  if (!req.user) {
+    console.log('❌ No user in request - authentication failed');
+    return res.status(401).json({
+      message: 'Authentication required. Please login.'
+    });
+  }
 
   // Explicitly deny restaurant operators
-  if (req.user && req.user.role === 'restaurant_operator') {
+  if (req.user.role === 'restaurant_operator') {
     console.log('❌ Restaurant operator access denied to admin routes');
     return res.status(403).json({
       message: 'Access denied. Restaurant operators cannot access admin features.'
     });
   }
 
-  // Check if user has admin role in token
-  if (req.user && req.user.role === 'admin') {
-    console.log('✅ Admin access granted');
+  // Check if user has admin role
+  if (req.user.role === 'admin') {
+    console.log('✅ Admin access granted for user:', req.user._id);
     return next();
   }
 
-  console.log('❌ Admin access denied');
+  console.log('❌ Admin access denied - user role:', req.user.role || 'undefined');
   return res.status(403).json({
-    message: 'Access denied. Admin only.'
+    message: 'Access denied. Admin only.',
+    userRole: req.user.role || 'undefined'
   });
 };
 
