@@ -38,6 +38,7 @@ export default function AuthPage() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const { sendOTP, verifyOTP, telegramLogin } = useAuthStore();
   const router = useRouter();
 
@@ -123,11 +124,19 @@ export default function AuthPage() {
 
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent duplicate submissions
+    if (isVerifying || loading) {
+      return;
+    }
+    
     setError('');
     setLoading(true);
+    setIsVerifying(true);
 
     try {
       await verifyOTP(phoneNumber, code);
+      // Only navigate if verification was successful
       router.push('/packages');
     } catch (err: any) {
       const errorMsg = err.message || err.response?.data?.message || 'کد تایید نامعتبر است';
@@ -139,6 +148,7 @@ export default function AuthPage() {
         'No OTP found. Please request a new one': 'کد تایید یافت نشد. لطفا دوباره درخواست دهید'
       };
       setError(errorMap[errorMsg] || errorMsg);
+      setIsVerifying(false);
     } finally {
       setLoading(false);
     }
@@ -236,11 +246,11 @@ export default function AuthPage() {
               </button>
               <button
                 type="submit"
-                disabled={loading || code.length !== 6}
+                disabled={loading || isVerifying || code.length !== 6}
                 className="flex-1 bg-gradient-to-l from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-500 text-white rounded-xl py-4 font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-accent-500/20"
               >
                 <LogIn className="w-5 h-5" />
-                {loading ? 'در حال ورود...' : 'تایید و ورود'}
+                {loading || isVerifying ? 'در حال ورود...' : 'تایید و ورود'}
               </button>
             </div>
           </form>
