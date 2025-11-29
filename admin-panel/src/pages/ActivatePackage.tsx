@@ -70,9 +70,9 @@ const ActivatePackage = () => {
       await adminService.activatePackage(values.userId, values.packageId);
       message.success('پکیج با موفقیت برای کاربر فعال شد');
       form.resetFields();
-
+      
       // Reload users to show updated package count
-      await loadUsers();
+      loadUsers();
     } catch (error: any) {
       console.error('Activate package error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'خطا در فعال‌سازی پکیج';
