@@ -20,4 +20,3 @@
 #   fix: OTP verification accepts both code and otpCode parameters
 #   feat: Add MongoDB backup and restore scripts
 #   docs: Add data persistence guide for MongoDB volumes
-

@@ -49,8 +49,8 @@ export default function RatingModal({
         isGift
       });
       alert('امتیاز شما با موفقیت ثبت شد');
-      onClose();
       setRating(0);
+      onClose();
     } catch (error: any) {
       alert(error.response?.data?.message || 'خطا در ثبت امتیاز');
     } finally {
@@ -109,7 +109,3 @@ export default function RatingModal({
     </div>
   );
 }
-
-
-
-

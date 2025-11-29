@@ -38,7 +38,7 @@ else
     # Generate commit message based on changes
     echo ""
     echo "🔍 Analyzing changes..."
-    
+
     # Detect change types
     BACKEND_CHANGES=$(git diff --name-only --cached 2>/dev/null | grep -E "^backend/" | wc -l || echo "0")
     FRONTEND_CHANGES=$(git diff --name-only --cached 2>/dev/null | grep -E "^frontend/" | wc -l || echo "0")
@@ -46,7 +46,7 @@ else
     SCRIPT_CHANGES=$(git diff --name-only --cached 2>/dev/null | grep -E "^scripts/" | wc -l || echo "0")
     DOC_CHANGES=$(git diff --name-only --cached 2>/dev/null | grep -E "\.md$" | wc -l || echo "0")
     CONFIG_CHANGES=$(git diff --name-only --cached 2>/dev/null | grep -E "(docker-compose|Dockerfile|\.conf)" | wc -l || echo "0")
-    
+
     # Determine commit type
     if [ "$BACKEND_CHANGES" -gt 0 ] || [ "$FRONTEND_CHANGES" -gt 0 ] || [ "$ADMIN_CHANGES" -gt 0 ]; then
         TYPE="fix"
@@ -62,11 +62,11 @@ else
     else
         TYPE="chore"
     fi
-    
+
     # Generate subject
     CHANGED_FILES=$(git diff --name-only --cached 2>/dev/null | head -3 | sed 's|.*/||' | tr '\n' ', ' | sed 's/,$//' || echo "files")
     SUBJECT="Update $CHANGED_FILES"
-    
+
     COMMIT_MSG="$TYPE: $SUBJECT"
 fi
 
@@ -110,4 +110,3 @@ else
     echo "❌ Commit cancelled"
     exit 1
 fi
-

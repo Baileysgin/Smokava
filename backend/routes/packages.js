@@ -200,6 +200,8 @@ router.post('/verify-consumption-otp', async (req, res) => {
 
     let remainingToDeduct = user.consumptionOtpCount;
     const consumedPackages = [];
+    const mongoose = require('mongoose');
+    const redeemLogId = new mongoose.Types.ObjectId(); // Generate unique ID for this redemption
 
     // Deduct from packages
     for (const userPackage of userPackages) {
@@ -211,7 +213,8 @@ router.post('/verify-consumption-otp', async (req, res) => {
         restaurant: user.consumptionOtpRestaurant,
         count: deductCount,
         flavor: '',
-        consumedAt: new Date()
+        consumedAt: new Date(),
+        redeemLogId: redeemLogId // Add redeemLogId for rating tracking
       });
 
       await userPackage.save();
@@ -235,6 +238,10 @@ router.post('/verify-consumption-otp', async (req, res) => {
     user.consumptionOtpUsed = true;
     await user.save();
 
+    // Check if rating already exists for this redemption
+    const Rating = require('../models/Rating');
+    const existingRating = await Rating.findOne({ userId: user._id, redeemLogId });
+
     res.json({
       message: 'Shisha consumed successfully',
       restaurant: {
@@ -242,7 +249,9 @@ router.post('/verify-consumption-otp', async (req, res) => {
         _id: restaurant._id
       },
       count: user.consumptionOtpCount,
-      consumedPackages
+      consumedPackages,
+      redeemLogId: redeemLogId.toString(),
+      requiresRating: !existingRating // True if rating is required
     });
   } catch (error) {
     console.error('Verify consumption OTP error:', error);

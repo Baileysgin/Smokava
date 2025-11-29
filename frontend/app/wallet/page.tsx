@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, MapPin, Wallet, ArrowUp, Key, Copy, Check, Gift } from 'lucide-react';
+import { Calendar, MapPin, Wallet, ArrowUp, Key, Copy, Check, Gift, Star } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { usePackageStore } from '@/store/packageStore';
 import { useRestaurantStore } from '@/store/restaurantStore';
@@ -12,7 +12,7 @@ import RatingModal from '@/components/RatingModal';
 export default function WalletPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const { userPackages, loading, fetchUserPackages, generateConsumptionOtp } = usePackageStore();
+  const { userPackages, loading, fetchUserPackages, generateConsumptionOtp, getPendingRating, getUnratedConsumptions } = usePackageStore();
   const { restaurants, fetchRestaurants } = useRestaurantStore();
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
@@ -29,6 +29,16 @@ export default function WalletPage() {
     isGift?: boolean;
     restaurantName?: string;
   } | null>(null);
+  const [hasCheckedPendingRating, setHasCheckedPendingRating] = useState(false);
+  const [unratedConsumptions, setUnratedConsumptions] = useState<Map<string, {
+    redeemLogId: string;
+    restaurantId: string;
+    restaurantName: string;
+    operatorId?: string;
+    packageId: string;
+    isGift: boolean;
+    consumedAt: string;
+  }>>(new Map());
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,6 +48,93 @@ export default function WalletPage() {
     fetchUserPackages();
     fetchRestaurants();
   }, [isAuthenticated, router, fetchUserPackages, fetchRestaurants]);
+
+  // Fetch unrated consumptions
+  useEffect(() => {
+    const fetchUnrated = async () => {
+      if (!isAuthenticated || loading) return;
+      try {
+        const result = await getUnratedConsumptions();
+        const unratedMap = new Map();
+        result.consumptions.forEach(consumption => {
+          unratedMap.set(consumption.redeemLogId, consumption);
+        });
+        setUnratedConsumptions(unratedMap);
+      } catch (error) {
+        console.error('Error fetching unrated consumptions:', error);
+      }
+    };
+
+    if (!loading && userPackages.length > 0) {
+      fetchUnrated();
+    }
+  }, [isAuthenticated, loading, userPackages, getUnratedConsumptions]);
+
+  // Check for pending ratings after packages are loaded
+  useEffect(() => {
+    const checkPendingRating = async () => {
+      if (!isAuthenticated || loading || hasCheckedPendingRating || showRatingModal) return;
+
+      try {
+        const result = await getPendingRating();
+        if (result.pending) {
+          setRatingData({
+            restaurantId: result.pending.restaurantId,
+            operatorId: result.pending.operatorId,
+            packageId: result.pending.packageId,
+            redeemLogId: result.pending.redeemLogId,
+            isGift: result.pending.isGift,
+            restaurantName: result.pending.restaurantName
+          });
+          setShowRatingModal(true);
+        }
+        setHasCheckedPendingRating(true);
+      } catch (error) {
+        console.error('Error checking pending rating:', error);
+        setHasCheckedPendingRating(true); // Mark as checked even on error to prevent retry loops
+      }
+    };
+
+    if (!loading && userPackages.length > 0 && !showRatingModal) {
+      checkPendingRating();
+    }
+  }, [isAuthenticated, loading, userPackages.length, getPendingRating, hasCheckedPendingRating, showRatingModal]);
+
+  // Reset check flag when rating modal is closed (to allow checking again after new redemption)
+  useEffect(() => {
+    if (!showRatingModal && ratingData === null) {
+      setHasCheckedPendingRating(false);
+    }
+  }, [showRatingModal, ratingData]);
+
+  // Check for pending ratings when page becomes visible (user returns to app)
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && isAuthenticated && !loading && !showRatingModal) {
+        try {
+          const result = await getPendingRating();
+          if (result.pending) {
+            setRatingData({
+              restaurantId: result.pending.restaurantId,
+              operatorId: result.pending.operatorId,
+              packageId: result.pending.packageId,
+              redeemLogId: result.pending.redeemLogId,
+              isGift: result.pending.isGift,
+              restaurantName: result.pending.restaurantName
+            });
+            setShowRatingModal(true);
+          }
+        } catch (error) {
+          console.error('Error checking pending rating on visibility change:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isAuthenticated, loading, showRatingModal, getPendingRating]);
 
   const handleGenerateOtp = async () => {
     if (!selectedRestaurant) {
@@ -310,35 +407,70 @@ export default function WalletPage() {
           <h3 className="text-lg font-bold text-white mb-4">تاریخچه مصرف</h3>
           <div className="space-y-3">
             {activePackage.history && activePackage.history.length > 0 ? (
-              activePackage.history.map((item, index) => (
-                <div
-                  key={index}
-                  className="border border-accent-500/20 rounded-2xl p-4 backdrop-blur-xl"
-                  style={{ backgroundColor: 'rgba(45, 45, 45, 0.6)' }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h4 className="text-white font-semibold mb-1">
-                        {item.restaurant?.nameFa || 'نامشخص'}
-                      </h4>
-                      <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{item.restaurant?.addressFa?.split('،').slice(0, 2).join('،') || ''}</span>
+              activePackage.history.map((item, index) => {
+                const redeemLogId = (item as any).redeemLogId?.toString();
+                const canRate = redeemLogId && unratedConsumptions.has(redeemLogId);
+                const unratedData = canRate ? unratedConsumptions.get(redeemLogId) : null;
+                const consumedDate = new Date(item.consumedAt);
+                const twoDaysAgo = new Date();
+                twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+                const isWithinTwoDays = consumedDate >= twoDaysAgo;
+
+                const handleRateClick = () => {
+                  if (unratedData) {
+                    setRatingData({
+                      restaurantId: unratedData.restaurantId,
+                      operatorId: unratedData.operatorId,
+                      packageId: unratedData.packageId,
+                      redeemLogId: unratedData.redeemLogId,
+                      isGift: unratedData.isGift,
+                      restaurantName: unratedData.restaurantName
+                    });
+                    setShowRatingModal(true);
+                  }
+                };
+
+                return (
+                  <div
+                    key={index}
+                    className="border border-accent-500/20 rounded-2xl p-4 backdrop-blur-xl"
+                    style={{ backgroundColor: 'rgba(45, 45, 45, 0.6)' }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-white font-semibold mb-1">
+                          {item.restaurant?.nameFa || 'نامشخص'}
+                        </h4>
+                        <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>{item.restaurant?.addressFa?.split('،').slice(0, 2).join('،') || ''}</span>
+                        </div>
+                        {item.flavor && (
+                          <p className="text-red-400 text-sm mb-2">🍃 {item.flavor}</p>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-4 h-4" />
+                          <span>{formatDate(item.consumedAt)}</span>
+                        </div>
                       </div>
-                      {item.flavor && (
-                        <p className="text-red-400 text-sm mb-2">🍃 {item.flavor}</p>
-                      )}
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(item.consumedAt)}</span>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                          {item.count} عدد
+                        </div>
+                        {canRate && isWithinTwoDays && (
+                          <button
+                            onClick={handleRateClick}
+                            className="flex items-center gap-1 bg-gradient-to-l from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-500 text-dark-300 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all"
+                          >
+                            <Star className="w-4 h-4 fill-current" />
+                            امتیاز دهید
+                          </button>
+                        )}
                       </div>
-                    </div>
-                    <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      {item.count} عدد
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="bg-dark-100 border border-accent-500/20 rounded-2xl p-6 text-center">
                 <p className="text-gray-400">هنوز مصرفی ثبت نشده</p>
@@ -467,9 +599,21 @@ export default function WalletPage() {
       {ratingData && (
         <RatingModal
           isOpen={showRatingModal}
-          onClose={() => {
+          onClose={async () => {
             setShowRatingModal(false);
             setRatingData(null);
+            // Refresh packages and unrated consumptions after rating is submitted/closed
+            await fetchUserPackages();
+            try {
+              const result = await getUnratedConsumptions();
+              const unratedMap = new Map();
+              result.consumptions.forEach(consumption => {
+                unratedMap.set(consumption.redeemLogId, consumption);
+              });
+              setUnratedConsumptions(unratedMap);
+            } catch (error) {
+              console.error('Error refreshing unrated consumptions:', error);
+            }
           }}
           restaurantId={ratingData.restaurantId}
           operatorId={ratingData.operatorId}

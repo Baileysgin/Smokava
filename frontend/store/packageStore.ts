@@ -33,6 +33,7 @@ export interface UserPackage {
     count: number;
     flavor?: string;
     consumedAt: string;
+    redeemLogId?: string;
   }>;
 }
 
@@ -46,6 +47,8 @@ interface PackageState {
   generateConsumptionOtp: (restaurantId: string, count?: number) => Promise<{ otpCode: string; expiresAt: string; restaurantId: string; count: number }>;
   redeemShisha: (userPackageId: string, restaurantId: string, count?: number) => Promise<void>;
   submitRating: (data: { restaurantId: string; operatorId?: string; packageId?: string; redeemLogId: string; rating: number; isGift?: boolean }) => Promise<void>;
+  getPendingRating: () => Promise<{ pending: { redeemLogId: string; restaurantId: string; restaurantName: string; operatorId?: string; packageId: string; isGift: boolean; consumedAt: string } | null; count: number }>;
+  getUnratedConsumptions: () => Promise<{ consumptions: Array<{ redeemLogId: string; restaurantId: string; restaurantName: string; operatorId?: string; packageId: string; isGift: boolean; consumedAt: string; count: number; flavor: string }>; count: number }>;
 }
 
 export const usePackageStore = create<PackageState>((set, get) => ({
@@ -116,6 +119,26 @@ export const usePackageStore = create<PackageState>((set, get) => ({
       await api.post('/rating/submit', data);
     } catch (error) {
       console.error('Submit rating error:', error);
+      throw error;
+    }
+  },
+
+  getPendingRating: async () => {
+    try {
+      const response = await api.get('/rating/pending');
+      return response.data;
+    } catch (error) {
+      console.error('Get pending rating error:', error);
+      throw error;
+    }
+  },
+
+  getUnratedConsumptions: async () => {
+    try {
+      const response = await api.get('/rating/unrated-consumptions');
+      return response.data;
+    } catch (error) {
+      console.error('Get unrated consumptions error:', error);
       throw error;
     }
   },
