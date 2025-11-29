@@ -74,17 +74,29 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle token expiration
+// Handle token expiration and access denied
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle 401 (Unauthorized) - token invalid or expired
     if (error.response?.status === 401) {
+      console.warn('⚠️ 401 Unauthorized - clearing tokens and redirecting to login');
       localStorage.removeItem('adminToken');
       localStorage.removeItem('operatorToken');
       // Check if we're on operator routes
       if (window.location.pathname.startsWith('/operator')) {
         window.location.href = '/operator/login';
       } else {
+        window.location.href = '/login';
+      }
+    }
+    // Handle 403 (Forbidden) - token valid but insufficient permissions
+    // This usually means admin token expired or user needs to re-login
+    if (error.response?.status === 403 && error.config?.url?.includes('/admin/')) {
+      console.warn('⚠️ 403 Forbidden on admin route - token may be expired, redirecting to login');
+      localStorage.removeItem('adminToken');
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
     }
