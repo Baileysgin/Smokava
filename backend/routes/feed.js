@@ -26,6 +26,7 @@ router.get('/', auth, async (req, res) => {
     const posts = await Post.find(query)
       .populate('user', 'firstName lastName username photoUrl phoneNumber name avatar isPrivate')
       .populate('restaurant', 'nameFa addressFa')
+      .populate('comments.user', 'firstName lastName username photoUrl phoneNumber name avatar')
       .sort({ createdAt: -1 });
 
     // Filter out posts from private users unless current user is following them or is the post owner
