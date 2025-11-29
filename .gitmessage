@@ -1,0 +1,23 @@
+# Commit Message Template
+# Format: <type>: <subject>
+#
+# <body>
+#
+# <footer>
+#
+# Types:
+#   feat:     New feature
+#   fix:      Bug fix
+#   docs:     Documentation changes
+#   style:    Code style changes (formatting, etc.)
+#   refactor: Code refactoring
+#   test:     Adding or updating tests
+#   chore:    Maintenance tasks, build scripts, etc.
+#   perf:     Performance improvements
+#   ci:       CI/CD changes
+#
+# Examples:
+#   fix: OTP verification accepts both code and otpCode parameters
+#   feat: Add MongoDB backup and restore scripts
+#   docs: Add data persistence guide for MongoDB volumes
+
