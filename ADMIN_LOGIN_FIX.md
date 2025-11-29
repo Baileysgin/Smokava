@@ -56,3 +56,4 @@ Expected response:
 1. Log in to the admin panel with the credentials above
 2. Change the default password for security
 3. Optionally create additional admin users with different credentials
+

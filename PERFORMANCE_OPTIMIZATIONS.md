@@ -189,3 +189,4 @@ In browser DevTools:
 2. Add CDN for static assets
 3. Implement service worker for offline caching
 4. Add database indexes for slow queries
+

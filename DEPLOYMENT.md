@@ -302,3 +302,4 @@ curl http://localhost:5173
 - [ ] Configure CORS properly
 - [ ] Use environment variables (never commit secrets)
 - [ ] Keep Docker images updated
+

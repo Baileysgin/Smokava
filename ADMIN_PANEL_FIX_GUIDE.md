@@ -4,7 +4,7 @@
 
 The admin panel at `https://admin.smokava.com` was not receiving any data:
 - `/users` returned empty arrays
-- `/packages` returned empty arrays  
+- `/packages` returned empty arrays
 - `/sold-packages` returned empty arrays
 - No errors were thrown, but data was missing
 

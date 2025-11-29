@@ -84,3 +84,4 @@ ALLOWED_ORIGINS=http://smokava.com,http://www.smokava.com,http://admin.smokava.c
 - **Kavenegar**: Configured and active
 
 **Everything should now work correctly!** 🎉
+

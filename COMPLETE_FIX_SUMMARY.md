@@ -89,3 +89,4 @@ Frontend was getting `ERR_EMPTY_RESPONSE` when trying to login at `http://smokav
 - ✅ All services: Running and healthy
 
 **Everything should work now!** 🎉
+

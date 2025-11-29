@@ -75,3 +75,4 @@ elif echo "$OTP_RESPONSE" | grep -q "fallback"; then
 else
     echo "❌ SMS failed, check error above"
 fi
+

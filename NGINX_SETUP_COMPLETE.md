@@ -119,3 +119,4 @@ sudo tail -f /var/log/nginx/error.log
 - ⏳ SSL certificates (optional, for HTTPS)
 
 **Your project should be accessible via smokava.com once DNS propagates!**
+

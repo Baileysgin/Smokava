@@ -478,3 +478,4 @@ echo ""
 echo -e "${BLUE}View backend logs:${NC}"
 echo "ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'docker logs -f $BACKEND_CONTAINER'"
 echo ""
+

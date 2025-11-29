@@ -132,3 +132,4 @@ curl -X POST https://api.smokava.com/api/auth/verify-otp \
 4. Enter code **461641** to complete login
 
 **The system is ready for production use!** 🎉
+

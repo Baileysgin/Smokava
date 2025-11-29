@@ -58,3 +58,4 @@ docker compose exec backend node scripts/createAdmin.js newusername newpassword
 - ✅ Default credentials active
 
 **Remember to change the password after first login!**
+

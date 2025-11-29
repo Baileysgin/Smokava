@@ -97,3 +97,4 @@ If OTP is not being sent:
 ✅ **Ready**: OTP sending is active
 
 Your Kavenegar OTP service is now configured and ready to use! 🎉
+

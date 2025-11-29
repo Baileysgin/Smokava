@@ -74,3 +74,4 @@ echo "4. Create symlink: sudo ln -s /etc/nginx/sites-available/smokava /etc/ngin
 echo "5. Update domain names in nginx config"
 echo "6. Run: sudo certbot --nginx -d your-domain.com"
 echo "7. Start backend: pm2 start ecosystem.config.js"
+

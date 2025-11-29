@@ -55,11 +55,22 @@ const OperatorLogin = () => {
   const onVerifyOtp = async (values: { otpCode: string }) => {
     try {
       setLoading(true);
+
+      // Ensure phoneNumber is available
+      if (!phoneNumber) {
+        message.error('شماره تلفن یافت نشد. لطفا دوباره تلاش کنید');
+        setStep(0);
+        return;
+      }
+
+      console.log('Verifying OTP:', { phoneNumber, otpCode: values.otpCode });
       await verifyOtp(phoneNumber, values.otpCode);
       message.success('ورود موفقیت‌آمیز بود');
       navigate('/operator');
     } catch (error: any) {
-      message.error(error.message || 'کد تأیید نامعتبر است');
+      console.error('OTP verification error:', error);
+      const errorMessage = error.message || error.response?.data?.message || 'کد تأیید نامعتبر است';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }

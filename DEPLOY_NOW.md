@@ -1,120 +1,149 @@
-# ✅ Ready to Deploy - Admin Panel Fix
+# Deploy Fixes - Step by Step Guide
 
-## 🎉 Changes Successfully Pushed to GitHub
+## 🎯 What We're Deploying
 
-The admin panel fix has been committed and pushed to the repository:
-- **Commit**: `427b014` - "Fix admin panel chunk splitting and React load order"
-- **Branch**: `main`
-- **Files Changed**:
-  - `admin-panel/vite.config.ts` (fixed chunk splitting)
-  - `admin-panel/src/main.tsx` (enhanced error handling)
+1. **Backend Fix**: Package feature fields (`feature_usage_fa`, `feature_validity_fa`, `feature_support_fa`) now load correctly
+2. **Admin Panel Fix**: API URL configuration fixed
 
-## 🚀 Quick Deployment on Server
+## 🚀 Option 1: Deploy via SSH Script (When Network is Stable)
 
-**Option 1: Using the Deployment Script (Easiest)**
-
-1. **SSH into your server:**
-   ```bash
-   ssh root@91.107.241.245
-   ```
-
-2. **Copy the deployment script to the server:**
-   ```bash
-   # On your local machine:
-   scp scripts/deploy-admin-panel-on-server.sh root@91.107.241.245:/opt/smokava/
-
-   # Then on the server:
-   ssh root@91.107.241.245
-   cd /opt/smokava
-   chmod +x deploy-admin-panel-on-server.sh
-   ./deploy-admin-panel-on-server.sh
-   ```
-
-**Option 2: Manual Deployment**
-
-1. **SSH into your server:**
-   ```bash
-   ssh root@91.107.241.245
-   ```
-
-2. **Navigate to project directory:**
-   ```bash
-   cd /opt/smokava
-   ```
-
-3. **Pull latest changes:**
-   ```bash
-   git pull origin main
-   ```
-
-4. **Rebuild the admin-panel container:**
-   ```bash
-   docker compose build --no-cache admin-panel
-   ```
-
-5. **Restart the container:**
-   ```bash
-   docker compose up -d admin-panel
-   ```
-
-6. **Verify it's running:**
-   ```bash
-   docker compose ps admin-panel
-   docker compose logs --tail=30 admin-panel
-   ```
-
-## ✅ Verification Steps
-
-After deployment, verify the fix:
-
-1. **Open the admin panel:**
-   - http://admin.smokava.com
-   - or http://91.107.241.245:5173
-
-2. **Clear browser cache:**
-   - Press `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (Mac)
-   - Or open in incognito/private window
-
-3. **Check browser console:**
-   - Press F12 to open DevTools
-   - Go to Console tab
-   - Should see **NO ERRORS**
-   - Should **NOT** see "Cannot read properties of undefined (reading 'version')"
-
-4. **Verify the page loads:**
-   - Should see the login page (not blank white screen)
-   - Page should be interactive
-
-## 🔍 Troubleshooting
-
-**If the page still shows blank:**
-1. Hard refresh browser (Ctrl+Shift+R)
-2. Clear browser cache completely
-3. Check container logs: `docker compose logs admin-panel`
-4. Verify container is running: `docker compose ps admin-panel`
-
-**If container fails to build:**
 ```bash
-docker compose logs admin-panel
-# Check for specific build errors
+# Make scripts executable
+chmod +x scripts/deploy-via-git.sh
+chmod +x scripts/deploy-all-fixes.sh
+
+# Try deployment (may need multiple attempts due to SSH instability)
+./scripts/deploy-via-git.sh
 ```
 
-**To rollback if needed:**
+If that fails, try:
+```bash
+./scripts/deploy-all-fixes.sh
+```
+
+## 📋 Option 2: Manual Deployment via SSH
+
+### Step 1: Connect to Server
+```bash
+ssh root@91.107.241.245
+# Password: pqwRU4qhpVW7
+```
+
+### Step 2: Navigate to Project
 ```bash
 cd /opt/smokava
-git checkout HEAD~1 admin-panel/vite.config.ts admin-panel/src/main.tsx
+```
+
+### Step 3: Pull Latest Code (if using git)
+```bash
+git pull origin main
+```
+
+### Step 4: Restart Backend
+```bash
+docker compose restart backend
+```
+
+### Step 5: Rebuild Admin Panel
+```bash
+export VITE_API_URL=https://api.smokava.com/api
 docker compose build --no-cache admin-panel
 docker compose up -d admin-panel
 ```
 
-## 📋 What Was Fixed
+### Step 6: Check Status
+```bash
+docker ps | grep smokava
+docker compose logs --tail=50 backend
+docker compose logs --tail=50 admin-panel
+```
 
-✅ React Router now properly bundled with React
-✅ Correct module loading order ensured
-✅ Enhanced error handling added
-✅ Blank white page issue resolved
-✅ "Cannot read properties of undefined" error fixed
+## 📁 Option 3: Manual File Copy (If Git Pull Fails)
 
----
+### Copy Backend File
+From your local machine:
+```bash
+scp backend/routes/admin.js root@91.107.241.245:/opt/smokava/backend/routes/admin.js
+```
 
-**Ready to deploy?** Just SSH into the server and run the commands above! 🚀
+### Copy Admin Panel Files
+```bash
+scp admin-panel/src/lib/api.ts root@91.107.241.245:/opt/smokava/admin-panel/src/lib/api.ts
+scp admin-panel/vite.config.ts root@91.107.241.245:/opt/smokava/admin-panel/vite.config.ts
+scp admin-panel/Dockerfile root@91.107.241.245:/opt/smokava/admin-panel/Dockerfile
+scp docker-compose.yml root@91.107.241.245:/opt/smokava/docker-compose.yml
+```
+
+Then SSH and rebuild:
+```bash
+ssh root@91.107.241.245
+cd /opt/smokava
+docker compose restart backend
+export VITE_API_URL=https://api.smokava.com/api
+docker compose build --no-cache admin-panel
+docker compose up -d admin-panel
+```
+
+## ✅ Verification Steps
+
+### 1. Test Admin Panel
+- Go to: https://admin.smokava.com
+- Login with: `admin` / `admin123`
+- Check browser console (F12) - should see: `✅ Using API URL: https://api.smokava.com/api`
+
+### 2. Test Package Feature Fields
+- Go to Package Management page
+- Select or create a package
+- Fill in these fields:
+  - ویژگی استفاده (feature_usage_fa)
+  - ویژگی اعتبار (feature_validity_fa)
+  - ویژگی پشتیبانی (feature_support_fa)
+- Click Save
+- Select the package again
+- ✅ All three fields should now show your saved text
+
+## 🔍 Troubleshooting
+
+### If backend doesn't restart:
+```bash
+docker compose stop backend
+docker compose build backend
+docker compose up -d backend
+```
+
+### If admin panel doesn't rebuild:
+```bash
+docker compose stop admin-panel
+docker compose rm -f admin-panel
+export VITE_API_URL=https://api.smokava.com/api
+docker compose build --no-cache admin-panel
+docker compose up -d admin-panel
+```
+
+### Check logs:
+```bash
+docker compose logs --tail=100 backend
+docker compose logs --tail=100 admin-panel
+```
+
+## 📝 Files Changed
+
+- ✅ `backend/routes/admin.js` - Package feature fields handling
+- ✅ `admin-panel/src/lib/api.ts` - API URL configuration
+- ✅ `admin-panel/vite.config.ts` - Build configuration
+- ✅ `admin-panel/Dockerfile` - Environment variable support
+- ✅ `docker-compose.yml` - Admin panel environment variables
+
+All files are committed locally and ready for deployment.
+
+## 🎯 Quick Command Summary
+
+```bash
+# On server:
+cd /opt/smokava
+git pull origin main  # or copy files manually
+docker compose restart backend
+export VITE_API_URL=https://api.smokava.com/api
+docker compose build --no-cache admin-panel
+docker compose up -d admin-panel
+```

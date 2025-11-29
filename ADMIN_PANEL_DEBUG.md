@@ -89,3 +89,4 @@ According to `ADMIN_PANEL_CREDENTIALS.md`:
 - ⚠️ Backend service: **NEEDS TO BE STARTED**
 
 Once the backend is running, the admin panel login should work perfectly!
+

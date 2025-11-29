@@ -101,3 +101,4 @@ Your site will be live at:
 - **http://admin.smokava.com** (admin panel)
 
 Everything is configured correctly on the server side - just need to update nameservers at your registrar!
+

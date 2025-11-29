@@ -71,3 +71,4 @@ jobs:
             sleep 5
             pm2 status smokava-backend
             curl -f http://localhost:5000/ || exit 1
+

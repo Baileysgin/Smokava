@@ -81,3 +81,4 @@ curl -X POST https://api.smokava.com/api/auth/send-otp \
 1. **سرویس پیشرفته**: متد `verify/lookup.json` نیاز به سرویس پیشرفته Kavenegar دارد
 2. **Template**: باید template در پنل Kavenegar ثبت شده باشد
 3. **API Key**: باید API Key معتبر باشد
+

@@ -18,7 +18,7 @@ run_ssh() {
     local cmd="$1"
     local max_attempts=5
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         echo "  Attempt $attempt/$max_attempts..."
         if sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ServerAliveInterval=60 "$SERVER" "$cmd"; then
@@ -28,7 +28,7 @@ run_ssh() {
         sleep 3
         attempt=$((attempt + 1))
     done
-    
+
     echo "  ❌ All attempts failed"
     return 1
 }
@@ -38,7 +38,7 @@ copy_file() {
     local file="$1"
     local max_attempts=5
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         echo "  Copying $file (attempt $attempt/$max_attempts)..."
         if sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ServerAliveInterval=60 "$file" "$SERVER:$REMOTE_DIR/$file"; then
@@ -49,7 +49,7 @@ copy_file() {
         sleep 3
         attempt=$((attempt + 1))
     done
-    
+
     echo "  ❌ Failed to copy $file after $max_attempts attempts"
     return 1
 }
@@ -119,4 +119,3 @@ echo "📋 Next steps:"
 echo "1. Test admin panel at: https://admin.smokava.com"
 echo "2. Test package feature fields in admin panel"
 echo "3. Verify all fields load correctly after saving"
-

@@ -111,3 +111,4 @@ cd /opt/smokava/admin-panel
 # Temporarily disable optimizations in vite.config.ts
 npm run build
 ```
+

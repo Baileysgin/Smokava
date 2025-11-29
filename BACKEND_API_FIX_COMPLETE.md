@@ -168,3 +168,4 @@ ssh root@91.107.241.245 'docker logs -f smokava-backend'
 - ✅ API connectivity is restored
 
 **The ERR_CONNECTION_CLOSED and ERR_TIMED_OUT errors are now fixed. The API is fully operational and the OTP system is working end-to-end.**
+

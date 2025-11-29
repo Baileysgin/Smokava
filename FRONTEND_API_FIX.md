@@ -52,3 +52,4 @@ After restarting, check:
 2. **Check Network Tab**: Verify requests go to `api.smokava.com`
 3. **Check Backend CORS**: Ensure `http://smokava.com` is in allowed origins
 4. **Check Nginx**: Verify `api.smokava.com` routes to backend correctly
+

@@ -163,3 +163,4 @@ echo "🌐 Test URLs (HTTP):"
 echo "   - http://$DOMAIN"
 echo "   - http://api.$DOMAIN"
 echo "   - http://admin.$DOMAIN"
+

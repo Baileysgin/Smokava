@@ -171,3 +171,4 @@ This checks:
 - No hardcoded IP addresses
 - Environment variables are used correctly
 - `.env.example` files exist
+

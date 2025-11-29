@@ -75,3 +75,4 @@ else
     echo "⚠️  Still having issues. Check logs:"
     remote_exec "docker logs --tail=20 smokava-backend | grep -E '(Kavenegar|OTP|SMS)' | tail -10"
 fi
+

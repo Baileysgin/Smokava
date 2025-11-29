@@ -359,3 +359,4 @@ node -e "require('dotenv').config(); console.log(process.env.JWT_SECRET)"
 - [ ] All domains accessible
 - [ ] CI/CD workflows tested
 - [ ] Monitoring/logging set up
+

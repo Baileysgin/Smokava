@@ -362,3 +362,4 @@ echo "   - View backend logs: docker logs -f $BACKEND_CONTAINER"
 echo "   - Restart backend: docker restart $BACKEND_CONTAINER"
 echo "   - Check Nginx: sudo nginx -t && sudo systemctl status nginx"
 echo "   - Test API: curl -X POST https://api.smokava.com/api/auth/send-otp -H 'Content-Type: application/json' -d '{\"phoneNumber\":\"09302593819\"}'"
+

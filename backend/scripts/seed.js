@@ -111,22 +111,61 @@ async function seed() {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava');
     console.log('Connected to MongoDB');
 
-    // Clear existing data
-    await Package.deleteMany({});
-    await Restaurant.deleteMany({});
+    // Safety check: Only clear data if explicitly requested via CLEAR_DATA=true
+    const shouldClearData = process.env.CLEAR_DATA === 'true' || process.argv.includes('--clear');
 
-    // Insert packages
-    const insertedPackages = await Package.insertMany(packages);
-    console.log(`Inserted ${insertedPackages.length} packages`);
+    if (shouldClearData) {
+      console.log('⚠️  WARNING: Clearing existing Package and Restaurant data...');
 
-    // Insert restaurants
-    const insertedRestaurants = await Restaurant.insertMany(restaurants);
-    console.log(`Inserted ${insertedRestaurants.length} restaurants`);
+      // Count existing data before deletion
+      const packageCount = await Package.countDocuments();
+      const restaurantCount = await Restaurant.countDocuments();
 
-    console.log('Seed data inserted successfully');
+      if (packageCount > 0 || restaurantCount > 0) {
+        console.log(`Found ${packageCount} packages and ${restaurantCount} restaurants`);
+        console.log('Deleting existing data...');
+      }
+
+      await Package.deleteMany({});
+      await Restaurant.deleteMany({});
+      console.log('✅ Existing data cleared');
+    } else {
+      console.log('ℹ️  Skipping data deletion (use CLEAR_DATA=true or --clear flag to clear existing data)');
+      console.log('ℹ️  Checking for existing data...');
+
+      const existingPackages = await Package.countDocuments();
+      const existingRestaurants = await Restaurant.countDocuments();
+
+      if (existingPackages > 0 || existingRestaurants > 0) {
+        console.log(`⚠️  Found ${existingPackages} packages and ${existingRestaurants} restaurants already in database`);
+        console.log('⚠️  Skipping insertion to prevent duplicates');
+        console.log('⚠️  To replace existing data, run: CLEAR_DATA=true npm run seed');
+        process.exit(0);
+      }
+    }
+
+    // Insert packages (only if they don't already exist)
+    const packageExists = await Package.findOne({ name: packages[0].name });
+    if (!packageExists) {
+      const insertedPackages = await Package.insertMany(packages);
+      console.log(`✅ Inserted ${insertedPackages.length} packages`);
+    } else {
+      console.log('ℹ️  Packages already exist, skipping insertion');
+    }
+
+    // Insert restaurants (only if they don't already exist)
+    const restaurantExists = await Restaurant.findOne({ name: restaurants[0].name });
+    if (!restaurantExists) {
+      const insertedRestaurants = await Restaurant.insertMany(restaurants);
+      console.log(`✅ Inserted ${insertedRestaurants.length} restaurants`);
+    } else {
+      console.log('ℹ️  Restaurants already exist, skipping insertion');
+    }
+
+    console.log('✅ Seed operation completed successfully');
     process.exit(0);
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('❌ Error seeding database:', error);
     process.exit(1);
   }
 }

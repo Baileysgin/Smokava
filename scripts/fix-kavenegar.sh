@@ -60,3 +60,4 @@ REMOTE_SCRIPT
 
 echo ""
 echo "✅ Fix complete! Test OTP sending now."
+

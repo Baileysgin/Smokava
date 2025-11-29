@@ -64,3 +64,4 @@ docker run -d --name smokava-admin-panel \
    - ✅ No "VITE_API_URL environment variable is required"
 
 The admin panel should now work correctly!
+

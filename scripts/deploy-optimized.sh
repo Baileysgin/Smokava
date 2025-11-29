@@ -47,3 +47,4 @@ echo ""
 echo "To deploy to server:"
 echo "  scp -r dist/* root@91.107.241.245:/var/www/smokava-admin-panel/"
 echo "  ssh root@91.107.241.245 'sudo chown -R www-data:www-data /var/www/smokava-admin-panel && sudo systemctl reload nginx'"
+

@@ -263,3 +263,4 @@ echo "  3. Update environment variables to use HTTPS URLs"
 echo ""
 echo "📚 For troubleshooting, see: HTTPS_SETUP_INSTRUCTIONS.md"
 echo ""
+

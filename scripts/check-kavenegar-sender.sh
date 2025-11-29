@@ -64,3 +64,4 @@ echo "   5. If you don't have a registered sender, you may need to:"
 echo "      - Register a sender number in Kavenegar panel"
 echo "      - Or upgrade to premium plan to use lookup.json"
 echo ""
+

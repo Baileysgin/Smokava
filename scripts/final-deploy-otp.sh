@@ -112,3 +112,4 @@ echo ""
 echo "🔍 To check logs:"
 echo "   ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'docker logs -f smokava-backend'"
 echo ""
+

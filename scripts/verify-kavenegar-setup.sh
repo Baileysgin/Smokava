@@ -58,3 +58,4 @@ echo "   1. Restart your backend server"
 echo "   2. Test OTP from frontend: https://smokava.com/auth"
 echo "   3. Check backend logs for SMS status"
 echo ""
+

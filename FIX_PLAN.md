@@ -56,3 +56,4 @@ After fixes:
 - ✅ POST request succeeds
 - ✅ Login works from browser
 - ✅ No CORS errors in console
+

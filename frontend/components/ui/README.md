@@ -118,3 +118,4 @@ export default function AuthPage() {
 ## Browser Support
 
 Requires WebGL2 support. Modern browsers (Chrome, Firefox, Safari, Edge) all support WebGL2.
+

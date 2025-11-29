@@ -28,3 +28,4 @@ export const PurpleSmokeBackground = () => {
 export const AccentSmokeBackground = () => {
   return <SmokeBackground smokeColor="#ff6b35" />;
 };
+

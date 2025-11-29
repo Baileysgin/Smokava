@@ -151,3 +151,4 @@ echo "   4. Test verification file: curl -I https://smokava.com/28609673.txt"
 echo ""
 echo "📚 For more details, see: HTTPS_SETUP_INSTRUCTIONS.md"
 echo ""
+

@@ -198,3 +198,4 @@ curl -X POST https://api.smokava.com/api/auth/send-otp \
 ✅ **Result**: API is now accessible via HTTPS, OTP endpoint is working, SMS delivery confirmed
 
 ✅ **Status**: **FIXED** - The `ERR_CONNECTION_CLOSED` error is resolved. The API is now accessible and the OTP system is fully functional.
+

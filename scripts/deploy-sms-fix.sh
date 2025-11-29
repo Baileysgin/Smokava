@@ -77,3 +77,4 @@ echo "The system will now:"
 echo "  1. Try verify/lookup endpoint first (if template is set)"
 echo "  2. Automatically fallback to basic SMS send if premium is required"
 echo "  3. Send SMS with message: 'کد تایید اسموکاوا: [CODE]'"
+
