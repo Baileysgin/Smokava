@@ -91,14 +91,11 @@ api.interceptors.response.use(
       }
     }
     // Handle 403 (Forbidden) - token valid but insufficient permissions
-    // This usually means admin token expired or user needs to re-login
+    // Don't redirect automatically - let the user see the error and try logging in again
     if (error.response?.status === 403 && error.config?.url?.includes('/admin/')) {
-      console.warn('⚠️ 403 Forbidden on admin route - token may be expired, redirecting to login');
-      localStorage.removeItem('adminToken');
-      // Only redirect if not already on login page
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      console.error('⚠️ 403 Forbidden on admin route:', error.response?.data?.message);
+      // Don't clear token or redirect - let user manually log in again
+      // The error message will be shown in the UI
     }
     return Promise.reject(error);
   }
