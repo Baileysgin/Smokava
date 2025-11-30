@@ -19,9 +19,9 @@ router.get('/', async (req, res) => {
 router.post('/purchase', auth, async (req, res) => {
   try {
     const { packageId } = req.body;
-    const package = await Package.findById(packageId);
+    const pkg = await Package.findById(packageId);
 
-    if (!package) {
+    if (!pkg) {
       return res.status(404).json({ message: 'Package not found' });
     }
 
@@ -29,7 +29,7 @@ router.post('/purchase', auth, async (req, res) => {
     const userPackage = new UserPackage({
       user: req.user._id,
       package: packageId,
-      totalCount: package.count,
+      totalCount: pkg.count,
       remainingCount: 0, // Will be set after payment
       status: 'pending' // Add status field
     });
@@ -40,13 +40,13 @@ router.post('/purchase', auth, async (req, res) => {
     // In production, generate actual IPG payment URL with userPackage._id as orderId
     const paymentUrl = `${process.env.IPG_BASE_URL || 'https://payment.example.com'}/payment?` +
       `orderId=${userPackage._id}&` +
-      `amount=${package.price}&` +
+      `amount=${pkg.price}&` +
       `callback=${encodeURIComponent(process.env.IPG_CALLBACK_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL + '/packages/payment-callback' : 'https://smokava.com/packages/payment-callback'))}`;
 
     res.json({
       paymentUrl,
       userPackageId: userPackage._id,
-      amount: package.price
+      amount: pkg.price
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
