@@ -48,11 +48,16 @@ async function updateBaileysginUser() {
         
         if (existingUserWithUsername) {
           console.log(`⚠️  Username '${username}' is already taken by another user`);
-          console.log(`   Keeping current username: ${user.username || 'none'}`);
-        } else {
-          user.username = username;
-          console.log(`✅ Updated username to: ${username}`);
+          console.log(`   Removing username from the other user and assigning to this user...`);
+          
+          // Remove username from the other user (likely seed data)
+          existingUserWithUsername.username = undefined;
+          await existingUserWithUsername.save();
+          console.log(`✅ Removed username from other user (${existingUserWithUsername.phoneNumber})`);
         }
+        
+        user.username = username;
+        console.log(`✅ Updated username to: ${username}`);
       }
       
       // Update firstName if not set or different

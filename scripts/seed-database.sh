@@ -6,7 +6,7 @@
 # This script seeds the database with initial data
 # Run this after pulling from git to ensure database has required data
 # Usage: ./scripts/seed-database.sh
-# 
+#
 # This script:
 # 1. Seeds restaurants and packages (basic data)
 # 2. Seeds users and posts (feed content)
@@ -39,11 +39,11 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
         echo ""
         echo "📦 Step 1: Seeding restaurants and packages..."
         docker compose exec -T backend node scripts/seed.js
-        
+
         echo ""
         echo "👥 Step 2: Seeding users and posts..."
         docker compose exec -T backend node scripts/seedFakeData.js
-        
+
         echo ""
         echo "✅ Database seeding completed!"
         exit $?

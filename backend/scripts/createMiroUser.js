@@ -11,7 +11,7 @@ async function createMiroUser() {
     const username = 'miro';
 
     // Check if user already exists
-    let user = await User.findOne({ 
+    let user = await User.findOne({
       $or: [
         { phoneNumber: phoneNumber },
         { username: username }
@@ -23,14 +23,14 @@ async function createMiroUser() {
       console.log(`   Phone: ${user.phoneNumber}`);
       console.log(`   Username: ${user.username || 'not set'}`);
       console.log(`   Name: ${user.firstName || ''} ${user.lastName || ''}`);
-      
+
       // Update username if not set
       if (!user.username || user.username !== username) {
         user.username = username;
         await user.save();
         console.log(`✅ Updated username to: ${username}`);
       }
-      
+
       // Update firstName if not set
       if (!user.firstName) {
         user.firstName = 'Miro';
@@ -69,4 +69,3 @@ async function createMiroUser() {
 }
 
 createMiroUser();
-

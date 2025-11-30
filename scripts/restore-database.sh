@@ -29,7 +29,7 @@ fi
 if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
     if docker compose ps 2>/dev/null | grep -q "smokava-mongodb.*Up"; then
         echo "🐳 Using Docker Compose MongoDB container"
-        
+
         echo "📋 Step 1: Checking backup database..."
         docker compose exec -T mongodb mongosh READ__ME_TO_RECOVER_YOUR_DATA --quiet --eval "
             const userCount = db.users.countDocuments();
@@ -40,7 +40,7 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             print('  Posts: ' + postCount);
             print('  Restaurants: ' + restaurantCount);
         " 2>&1
-        
+
         echo ""
         echo "📋 Step 2: Copying users from backup..."
         docker compose exec -T mongodb mongosh --quiet --eval "
@@ -59,7 +59,7 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             });
             print('Users restored: ' + db.users.countDocuments());
         " 2>&1
-        
+
         echo ""
         echo "📋 Step 3: Copying restaurants from backup..."
         docker compose exec -T mongodb mongosh --quiet --eval "
@@ -77,7 +77,7 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             });
             print('Restaurants restored: ' + db.restaurants.countDocuments());
         " 2>&1
-        
+
         echo ""
         echo "📋 Step 4: Copying posts from backup..."
         docker compose exec -T mongodb mongosh --quiet --eval "
@@ -100,7 +100,7 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             print('Posts restored: ' + restored);
             print('Total posts: ' + db.posts.countDocuments());
         " 2>&1
-        
+
         echo ""
         echo "📋 Step 5: Copying packages from backup..."
         docker compose exec -T mongodb mongosh --quiet --eval "
@@ -116,7 +116,7 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             });
             print('Packages restored: ' + db.packages.countDocuments());
         " 2>&1
-        
+
         echo ""
         echo "📋 Step 6: Copying user packages from backup..."
         docker compose exec -T mongodb mongosh --quiet --eval "
@@ -138,7 +138,7 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             print('User packages restored: ' + restored);
             print('Total user packages: ' + db.userpackages.countDocuments());
         " 2>&1
-        
+
         echo ""
         echo "✅ Database restoration completed!"
         echo ""
@@ -150,11 +150,10 @@ if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; the
             print('Packages: ' + db.packages.countDocuments());
             print('UserPackages: ' + db.userpackages.countDocuments());
         " 2>&1
-        
+
         exit 0
     fi
 fi
 
 echo "❌ Docker Compose not available or MongoDB not running"
 exit 1
-

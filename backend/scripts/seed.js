@@ -166,7 +166,7 @@ async function seed() {
     // Insert packages - check each one individually to avoid duplicates
     let packageInsertedCount = 0;
     let packageSkippedCount = 0;
-    
+
     for (const pkg of packages) {
       const existing = await Package.findOne({ name: pkg.name });
       if (!existing) {
@@ -178,13 +178,13 @@ async function seed() {
         console.log(`ℹ️  Package already exists: ${pkg.name}`);
       }
     }
-    
+
     console.log(`✅ Package seeding complete: ${packageInsertedCount} inserted, ${packageSkippedCount} skipped`);
 
     // Insert restaurants - check each one individually to avoid duplicates
     let insertedCount = 0;
     let skippedCount = 0;
-    
+
     for (const restaurant of restaurants) {
       const existing = await Restaurant.findOne({ name: restaurant.name });
       if (!existing) {
@@ -196,7 +196,7 @@ async function seed() {
         console.log(`ℹ️  Restaurant already exists: ${restaurant.name}`);
       }
     }
-    
+
     console.log(`✅ Restaurant seeding complete: ${insertedCount} inserted, ${skippedCount} skipped`);
 
     console.log('✅ Seed operation completed successfully');
