@@ -157,3 +157,4 @@ fi
 
 echo "❌ Docker Compose not available or MongoDB not running"
 exit 1
+

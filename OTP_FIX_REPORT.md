@@ -181,3 +181,4 @@ docker exec smokava-backend node -e "require('dotenv').config(); console.log('AP
 **Critical:** Must update environment variables on production server
 
 
+

@@ -66,3 +66,4 @@ echo "      - Or upgrade to premium plan to use lookup.json"
 echo ""
 
 
+

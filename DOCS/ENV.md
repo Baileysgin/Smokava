@@ -181,4 +181,3 @@ MONGODB_URI=mongodb+srv://user:pass@prod-cluster.mongodb.net/smokava
 FRONTEND_URL=https://smokava.com
 # ... (use secure values)
 ```
-

@@ -114,3 +114,4 @@ echo "   ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'docker logs -f smokava-bac
 echo ""
 
 
+

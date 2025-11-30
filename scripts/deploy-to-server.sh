@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # ⚠️  DEPRECATED: This script is deprecated
-# 
+#
 # DO NOT USE THIS SCRIPT FOR DIRECT DEPLOYMENT
-# 
+#
 # Instead, use this workflow:
 # 1. Push code to GitHub: ./scripts/push-to-git.sh
 # 2. Deploy on server by pulling from git:
 #    ssh user@server "cd /opt/smokava && git pull && bash scripts/deploy.sh"
-# 
+#
 # Or use GitHub Actions CI/CD for automatic deployment
 #
 # This script is kept for reference only and should not be used.

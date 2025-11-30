@@ -60,3 +60,4 @@ docker compose exec backend node scripts/createAdmin.js newusername newpassword
 **Remember to change the password after first login!**
 
 
+

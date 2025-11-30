@@ -120,3 +120,4 @@ echo "3. Set up firewall rules"
 echo "4. Configure automated backups"
 echo ""
 echo "See DATABASE_RECOVERY_GUIDE.md for detailed instructions"
+

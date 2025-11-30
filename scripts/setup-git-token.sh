@@ -94,3 +94,4 @@ echo "   ./scripts/deploy-to-server.sh"
 echo ""
 echo "💡 Note: The token is stored in ~/.git-credentials on the server"
 echo "   It will be used automatically for all git operations"
+

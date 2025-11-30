@@ -75,4 +75,3 @@ else
     log "ERROR: Backup failed!"
     exit 1
 fi
-

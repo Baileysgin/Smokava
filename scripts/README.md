@@ -59,7 +59,7 @@ bash scripts/deploy.sh
    ```bash
    # SSH to server
    ssh user@server
-   
+
    # Deploy
    cd /opt/smokava
    git pull origin main
@@ -77,4 +77,3 @@ bash scripts/deploy.sh
 - Always push to git first
 - Deploy on server by pulling from git
 - This ensures version control and rollback capability
-

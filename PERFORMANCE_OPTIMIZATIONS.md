@@ -191,3 +191,4 @@ In browser DevTools:
 4. Add database indexes for slow queries
 
 
+

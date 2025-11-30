@@ -364,3 +364,4 @@ echo "   - Check Nginx: sudo nginx -t && sudo systemctl status nginx"
 echo "   - Test API: curl -X POST https://api.smokava.com/api/auth/send-otp -H 'Content-Type: application/json' -d '{\"phoneNumber\":\"09302593819\"}'"
 
 
+

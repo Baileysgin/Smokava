@@ -29,3 +29,4 @@
 - Rebuild admin panel with correct environment
 - Restart all services
 - Test all endpoints
+

@@ -110,3 +110,4 @@ else
     echo "❌ Commit cancelled"
     exit 1
 fi
+

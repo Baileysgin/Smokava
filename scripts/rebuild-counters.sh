@@ -20,3 +20,4 @@ curl -X POST "$API_URL/admin/rebuild-counters" \
 
 echo ""
 echo "Counters rebuild completed"
+

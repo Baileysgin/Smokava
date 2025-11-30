@@ -52,3 +52,4 @@ echo "1. Test editing a package in admin panel"
 echo "2. Fill in the feature fields (ویژگی استفاده, ویژگی اعتبار, ویژگی پشتیبانی)"
 echo "3. Save and reload the package"
 echo "4. Verify the fields are now loaded correctly"
+

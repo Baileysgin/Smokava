@@ -263,3 +263,4 @@ curl https://smokava.com | grep -i "enamad"
 **Next Action**: Enable HTTPS and configure DNS records
 
 
+

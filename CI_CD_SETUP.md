@@ -361,3 +361,4 @@ node -e "require('dotenv').config(); console.log(process.env.JWT_SECRET)"
 - [ ] Monitoring/logging set up
 
 
+

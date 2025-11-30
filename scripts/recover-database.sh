@@ -59,3 +59,4 @@ echo "1. Test admin login: https://admin.smokava.com"
 echo "2. Verify packages and restaurants are visible"
 echo "3. Set up automated backups to prevent future data loss"
 echo "4. Review server security (ransomware attack detected)"
+

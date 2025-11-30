@@ -72,4 +72,3 @@ echo "  3. Or manually deploy on server:"
 echo "     ssh user@server 'cd /opt/smokava && git pull && bash scripts/deploy.sh'"
 echo ""
 echo -e "${GREEN}✅ Push complete!${NC}"
-

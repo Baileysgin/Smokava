@@ -93,3 +93,4 @@ if (require.main === module) {
   // Note: Full test suite requires Jest or similar test runner
   console.log('✅ All model imports successful');
 }
+

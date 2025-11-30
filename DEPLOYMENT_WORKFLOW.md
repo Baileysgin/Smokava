@@ -117,4 +117,3 @@ curl https://api.smokava.com/api/health
 4. **Deploy during low-traffic periods** - reduces impact
 5. **Monitor after deployment** - check logs and health endpoints
 6. **Keep backups** - automated hourly backups are configured
-

@@ -56,3 +56,4 @@ fi
 echo ""
 echo "📋 Backup List:"
 ls -lh "$BACKUP_DIR"/mongodb_backup_*.gz 2>/dev/null | tail -5 || echo "No backups found"
+

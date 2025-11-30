@@ -66,3 +66,4 @@ If there are still timeout issues, they may be related to:
 - Kavenegar SMS service delays (but OTP is still generated)
 
 The frontend now provides clear Persian error messages for better user experience.
+

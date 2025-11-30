@@ -92,3 +92,4 @@ echo "📋 To view logs: ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP 'cd $DEPLOY
 rm -rf "$TEMP_DIR"
 
 
+

@@ -54,3 +54,4 @@ After restarting, check:
 4. **Check Nginx**: Verify `api.smokava.com` routes to backend correctly
 
 
+
