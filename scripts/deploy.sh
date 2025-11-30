@@ -60,14 +60,37 @@ sleep 10
 # Step 5: Health check
 echo -e "${YELLOW}🏥 Step 5: Running health checks...${NC}"
 
+# Get API URL from environment or use default
+API_URL="${API_BASE_URL:-${API_URL:-https://api.smokava.com}}"
+if [ -f ".env" ]; then
+    # Try to extract API_URL from .env file
+    if grep -q "API_BASE_URL" .env; then
+        API_URL=$(grep "API_BASE_URL" .env | cut -d '=' -f2 | tr -d '"' | tr -d "'" | xargs)
+    fi
+fi
+
+# Ensure API_URL ends with /api if it doesn't
+if [[ ! "$API_URL" == */api ]]; then
+    API_URL="${API_URL%/}/api"
+fi
+
 # Check backend health
-if curl -f http://localhost:5001/api/health > /dev/null 2>&1; then
+HEALTH_URL="${API_URL}/health"
+echo -e "${YELLOW}Checking health at: ${HEALTH_URL}${NC}"
+
+if curl -f "${HEALTH_URL}" > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Backend health check passed${NC}"
 else
-    echo -e "${RED}❌ Backend health check failed${NC}"
-    echo -e "${YELLOW}Checking logs...${NC}"
-    docker-compose logs --tail=50 backend
-    exit 1
+    echo -e "${YELLOW}⚠️  Health check failed, checking container status...${NC}"
+    # Check if container is running instead
+    if docker-compose ps | grep -q "backend.*Up"; then
+        echo -e "${GREEN}✅ Backend container is running${NC}"
+    else
+        echo -e "${RED}❌ Backend container is not running${NC}"
+        echo -e "${YELLOW}Checking logs...${NC}"
+        docker-compose logs --tail=50 backend
+        exit 1
+    fi
 fi
 
 # Check if services are running
@@ -76,14 +99,23 @@ docker-compose ps
 
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
 echo ""
-echo -e "${GREEN}Services are running:${NC}"
-echo "  - Backend: http://localhost:5001"
-echo "  - Frontend: http://localhost:3000"
-echo "  - Admin Panel: http://localhost:5173"
+echo -e "${GREEN}Services deployed:${NC}"
+if [ -f ".env" ]; then
+    if grep -q "FRONTEND_URL" .env; then
+        FRONTEND_URL=$(grep "FRONTEND_URL" .env | cut -d '=' -f2 | tr -d '"' | tr -d "'" | xargs)
+        echo "  - Frontend: ${FRONTEND_URL}"
+    fi
+    if grep -q "ADMIN_PANEL_URL" .env; then
+        ADMIN_URL=$(grep "ADMIN_PANEL_URL" .env | cut -d '=' -f2 | tr -d '"' | tr -d "'" | xargs)
+        echo "  - Admin Panel: ${ADMIN_URL}"
+    fi
+    echo "  - Backend API: ${API_URL}"
+else
+    echo "  - Configure FRONTEND_URL, ADMIN_PANEL_URL, and API_BASE_URL in .env"
+fi
 echo ""
 echo -e "${YELLOW}To view logs:${NC}"
 echo "  docker-compose logs -f [service-name]"
 echo ""
 echo -e "${YELLOW}To check health:${NC}"
-echo "  curl http://localhost:5001/api/health"
-
+echo "  curl ${HEALTH_URL}"

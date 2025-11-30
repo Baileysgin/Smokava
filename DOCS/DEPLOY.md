@@ -59,8 +59,10 @@ docker-compose up -d --no-deps --build backend frontend admin-panel
 ### 5. Verify Deployment
 
 ```bash
-# Check health endpoint
-curl http://localhost:5000/api/health
+# Check health endpoint (use your API URL from .env)
+curl ${API_BASE_URL}/api/health
+# Or if API_BASE_URL is not set:
+curl https://api.smokava.com/api/health
 
 # Check services are running
 docker-compose ps

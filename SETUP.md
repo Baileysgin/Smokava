@@ -1,79 +1,236 @@
-# Quick Setup Guide
+# Server Setup Guide
 
-## Step 1: Install Dependencies
+This guide covers setting up Smokava on a production server.
 
-```bash
-npm run install:all
-```
+## Prerequisites
 
-This will install dependencies for:
-- Root project
-- Backend
-- Frontend
+- Ubuntu/Debian server (or similar Linux distribution)
+- Docker and Docker Compose installed
+- Domain names configured (or use server IP)
+- Root or sudo access
 
-## Step 2: Set Up Environment Variables
-
-### Backend (`backend/.env`)
-Create `backend/.env` file:
-```
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/smokava
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-NODE_ENV=development
-```
-
-### Frontend (`frontend/.env.local`)
-Create `frontend/.env.local` file:
-```
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token_here
-```
-
-**Note**: Get a free Mapbox token from https://account.mapbox.com/access-tokens/
-
-## Step 3: Start MongoDB
-
-Make sure MongoDB is running on your system. You can:
-- Install MongoDB locally
-- Use MongoDB Atlas (cloud) and update MONGODB_URI
-
-## Step 4: Seed the Database
+## Step 1: Install Docker and Docker Compose
 
 ```bash
-npm run seed
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Verify installation
+docker --version
+docker-compose --version
 ```
 
-This will create:
-- 3 packages (10, 30, 50 pack)
-- 4 sample restaurants in Tehran
-
-## Step 5: Run the Application
+## Step 2: Clone Repository
 
 ```bash
-npm run dev
+cd /opt
+sudo git clone https://github.com/Baileysgin/Smokava.git
+cd Smokava
+sudo chown -R $USER:$USER .
 ```
 
-This will start:
-- Backend server: http://localhost:5000
-- Frontend server: http://localhost:3000
+## Step 3: Configure Environment Variables
 
-Open http://localhost:3000 in your browser.
+```bash
+# Copy example env file
+cp env.example .env
+
+# Edit with your production values
+nano .env
+```
+
+Required variables (see `DOCS/ENV.md` for complete list):
+
+```bash
+# Database
+MONGODB_URI=mongodb://mongodb:27017/smokava
+# Or for MongoDB Atlas:
+# MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/smokava
+
+# JWT Secret (generate strong secret)
+JWT_SECRET=$(openssl rand -base64 32)
+
+# URLs (use your actual domains)
+FRONTEND_URL=https://smokava.com
+ADMIN_PANEL_URL=https://admin.smokava.com
+API_BASE_URL=https://api.smokava.com
+ALLOWED_ORIGINS=https://smokava.com,https://www.smokava.com,https://admin.smokava.com
+
+# Frontend
+NEXT_PUBLIC_API_URL=https://api.smokava.com/api
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
+
+# Admin Panel
+VITE_API_URL=https://api.smokava.com/api
+
+# Kavenegar (SMS service)
+KAVENEGAR_API_KEY=your_api_key
+KAVENEGAR_TEMPLATE=otp-v2
+
+# Backup
+BACKUP_PATH=/var/backups/smokava
+RETENTION_DAYS=7
+```
+
+## Step 4: Set Up Backup Directory
+
+```bash
+sudo mkdir -p /var/backups/smokava
+sudo chown -R $USER:$USER /var/backups/smokava
+chmod +x scripts/db-backup.sh
+```
+
+## Step 5: Deploy Application
+
+```bash
+# Build and start all services
+docker-compose up -d --build
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+```
+
+## Step 6: Create Admin User
+
+```bash
+docker-compose exec backend node scripts/createAdmin.js admin yoursecurepassword
+```
+
+**Important**: Change the default password after first login!
+
+## Step 7: Set Up Hourly Backups
+
+```bash
+# Add to crontab
+crontab -e
+
+# Add this line:
+0 * * * * /opt/smokava/scripts/db-backup.sh >> /var/log/smokava-backup.log 2>&1
+```
+
+## Step 8: Configure Nginx (if using reverse proxy)
+
+See `nginx/smokava.conf` for example Nginx configuration.
+
+## Step 9: Set Up SSL Certificates
+
+Use Let's Encrypt with Certbot:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d smokava.com -d www.smokava.com -d admin.smokava.com -d api.smokava.com
+```
+
+## Step 10: Verify Deployment
+
+```bash
+# Check health endpoint
+curl https://api.smokava.com/api/health
+
+# Check services
+docker-compose ps
+
+# Check logs for errors
+docker-compose logs backend | tail -50
+```
+
+## Access Your Application
+
+- **Frontend**: `https://smokava.com`
+- **Admin Panel**: `https://admin.smokava.com`
+- **API**: `https://api.smokava.com/api`
 
 ## Troubleshooting
 
-### MongoDB Connection Error
-- Make sure MongoDB is running
-- Check your MONGODB_URI in `backend/.env`
-- For MongoDB Atlas, ensure your IP is whitelisted
+### Services Not Starting
 
-### Map Not Loading
-- Make sure you have a valid Mapbox token in `frontend/.env.local`
-- Check browser console for errors
+```bash
+# Check logs
+docker-compose logs backend
+docker-compose logs frontend
+docker-compose logs admin-panel
 
-### Port Already in Use
-- Change PORT in `backend/.env`
-- Frontend uses port 3000 by default (change in `frontend/package.json`)
+# Restart services
+docker-compose restart
+```
 
-### TypeScript Errors
-- Run `npm install` in both `frontend` and `backend` directories
-- Some type errors may resolve after installing dependencies
+### Database Connection Issues
+
+```bash
+# Check MongoDB container
+docker-compose logs mongodb
+
+# Verify connection
+docker-compose exec backend node -e "const mongoose = require('mongoose'); mongoose.connect(process.env.MONGODB_URI).then(() => console.log('Connected')).catch(e => console.error(e));"
+```
+
+### Port Conflicts
+
+If ports are already in use, modify `docker-compose.yml` to use different ports.
+
+### Backup Issues
+
+```bash
+# Test backup manually
+bash scripts/db-backup.sh
+
+# Check backup directory
+ls -lh /var/backups/smokava/
+```
+
+## Maintenance
+
+### Update Application
+
+```bash
+cd /opt/smokava
+git pull origin main
+bash scripts/deploy.sh
+```
+
+### View Logs
+
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f backend
+```
+
+### Restart Services
+
+```bash
+docker-compose restart
+# Or restart specific service
+docker-compose restart backend
+```
+
+## Security Checklist
+
+- [ ] Strong JWT_SECRET set
+- [ ] HTTPS enabled for all domains
+- [ ] MongoDB secured (use MongoDB Atlas or secure local instance)
+- [ ] Admin password changed from default
+- [ ] Firewall configured (only allow necessary ports)
+- [ ] Regular backups running
+- [ ] Environment variables not exposed in git
+- [ ] CORS origins properly configured
+
+## Next Steps
+
+- Configure monitoring and alerts
+- Set up log rotation
+- Configure automatic updates (optional)
+- Review `DOCS/DEPLOY.md` for advanced deployment options

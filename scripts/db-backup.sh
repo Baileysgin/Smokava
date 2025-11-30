@@ -9,7 +9,9 @@ set -e
 
 # Configuration
 BACKUP_DIR="${BACKUP_PATH:-/var/backups/smokava}"
-MONGODB_URI="${MONGODB_URI:-mongodb://localhost:27017/smokava}"
+# MONGODB_URI must be set in environment (from .env or docker-compose)
+# Default to Docker service name if not set
+MONGODB_URI="${MONGODB_URI:-mongodb://mongodb:27017/smokava}"
 DB_NAME="${DB_NAME:-smokava}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 RETENTION_HOURS=$((RETENTION_DAYS * 24))
@@ -73,3 +75,4 @@ else
     log "ERROR: Backup failed!"
     exit 1
 fi
+

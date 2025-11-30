@@ -8,7 +8,8 @@ This document lists all required and optional environment variables for Smokava.
 
 ```bash
 # Database
-MONGODB_URI=mongodb://localhost:27017/smokava
+# Use Docker service name in docker-compose or MongoDB Atlas
+MONGODB_URI=mongodb://mongodb:27017/smokava
 # Or for MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/smokava
 
@@ -151,14 +152,17 @@ mkdir -p $BACKUP_PATH
 
 ## Environment-Specific Examples
 
-### Development
+### Development (Optional - for local testing only)
 
 ```bash
+# Note: These are for local development only
+# Production should NEVER use localhost
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/smokava
-FRONTEND_URL=http://localhost:3000
-ADMIN_PANEL_URL=http://localhost:5173
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+MONGODB_URI=mongodb://mongodb:27017/smokava
+# Use your server IP or domain even in development
+FRONTEND_URL=https://smokava.com
+ADMIN_PANEL_URL=https://admin.smokava.com
+ALLOWED_ORIGINS=https://smokava.com,https://admin.smokava.com
 ```
 
 ### Staging
@@ -177,3 +181,4 @@ MONGODB_URI=mongodb+srv://user:pass@prod-cluster.mongodb.net/smokava
 FRONTEND_URL=https://smokava.com
 # ... (use secure values)
 ```
+
