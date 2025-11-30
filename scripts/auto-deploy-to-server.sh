@@ -77,8 +77,8 @@ SSH_CMD "$SERVER" "cd $REMOTE_DIR && bash scripts/db-backup.sh" || {
 # Step 6: Deploy services
 echo -e "${YELLOW}🔨 Step 5: Deploying services...${NC}"
 SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
-    docker-compose build backend && \
-    docker-compose up -d --no-deps backend && \
+    (docker compose build backend 2>/dev/null || docker-compose build backend) && \
+    (docker compose up -d --no-deps backend 2>/dev/null || docker-compose up -d --no-deps backend) && \
     echo '✅ Backend deployed'"
 
 # Step 7: Ensure admin user
