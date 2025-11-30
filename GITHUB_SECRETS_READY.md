@@ -81,4 +81,3 @@ https://github.com/Baileysgin/Smokava/settings/secrets/actions
 
 **Server:** root@91.107.241.245
 **API URL:** https://api.smokava.com
-
