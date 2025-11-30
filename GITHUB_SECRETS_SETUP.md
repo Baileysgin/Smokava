@@ -86,4 +86,3 @@ Once configured, every push to `main` will automatically:
 - Run health checks
 
 **No more manual deployment needed!** 🎉
-

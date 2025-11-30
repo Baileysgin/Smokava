@@ -114,4 +114,3 @@ echo "  4. ✅ Test SSH connection (optional)"
 echo ""
 echo -e "${GREEN}Once secrets are configured, every push to main will automatically deploy!${NC}"
 echo ""
-
