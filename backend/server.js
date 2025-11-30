@@ -171,8 +171,7 @@ mongoose.connect(mongoUri, {
   minPoolSize: 2, // Maintain at least 2 socket connections
   maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
   retryWrites: true,
-  w: 'majority',
-  bufferMaxEntries: 0 // Disable mongoose buffering
+  w: 'majority'
 })
   .then(async () => {
     console.log('MongoDB connected');
