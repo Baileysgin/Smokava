@@ -106,4 +106,3 @@ echo "   Server: $SERVER"
 echo "   Directory: $REMOTE_DIR"
 echo ""
 echo "🚀 Ready for deployment!"
-

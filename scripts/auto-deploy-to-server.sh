@@ -111,4 +111,3 @@ echo ""
 echo "🔗 Test login at: https://admin.smokava.com/login"
 echo "   Username: admin"
 echo "   Password: admin123"
-
