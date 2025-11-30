@@ -6,6 +6,7 @@ const Restaurant = require('../models/Restaurant');
 
 // Persian names for fake users
 const persianNames = [
+  { firstName: 'Baileysgin', lastName: '', username: 'baileysgin', photoUrl: 'https://i.pravatar.cc/150?img=12' },
   { firstName: 'علی', lastName: 'احمدی', username: 'user_ali' },
   { firstName: 'سارا', lastName: 'محمدی', username: 'user_sara' },
   { firstName: 'محمد', lastName: 'رضایی', username: 'user_mmd' },
@@ -143,19 +144,27 @@ async function seedFakeData() {
         user = new User({
           phoneNumber,
           firstName: nameData.firstName,
-          lastName: nameData.lastName,
+          lastName: nameData.lastName || '',
           username: nameData.username,
-          photoUrl: getRandomAvatar(i),
-          name: `${nameData.firstName} ${nameData.lastName}`, // Legacy field
-          avatar: getRandomAvatar(i), // Legacy field
+          photoUrl: nameData.photoUrl || getRandomAvatar(i),
+          name: nameData.lastName ? `${nameData.firstName} ${nameData.lastName}` : nameData.firstName, // Legacy field
+          avatar: nameData.photoUrl || getRandomAvatar(i), // Legacy field
           following: [],
           followers: [],
           createdAt: randomDate()
         });
         await user.save();
-        console.log(`Created user: ${nameData.username} (${nameData.firstName} ${nameData.lastName})`);
+        console.log(`Created user: ${nameData.username} (${nameData.firstName} ${nameData.lastName || ''})`);
       } else {
-        console.log(`User already exists: ${nameData.username}, skipping...`);
+        // Update existing user with photo if provided
+        if (nameData.photoUrl && !user.photoUrl) {
+          user.photoUrl = nameData.photoUrl;
+          user.avatar = nameData.photoUrl;
+          await user.save();
+          console.log(`Updated user photo: ${nameData.username}`);
+        } else {
+          console.log(`User already exists: ${nameData.username}, skipping...`);
+        }
       }
 
       fakeUsers.push(user);
@@ -198,9 +207,9 @@ async function seedFakeData() {
       }
     }
 
-    // Create fake posts (15-20 posts)
+    // Create fake posts (30-40 posts for more content)
     console.log('\nCreating fake posts...');
-    const numPosts = Math.floor(Math.random() * 6) + 15; // 15-20 posts
+    const numPosts = Math.floor(Math.random() * 11) + 30; // 30-40 posts
 
     for (let i = 0; i < numPosts; i++) {
       // Random user
