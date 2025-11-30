@@ -92,4 +92,3 @@ docker run --rm -v smokava_admin_data:/data -v $(pwd):/backup alpine tar czf /ba
 - Verify admin exists: Check MongoDB
 - Check credentials in volume: `docker-compose exec backend cat /app/data/admin-credentials.json`
 - Reset password: `docker-compose exec backend node scripts/createAdmin.js admin newpassword`
-

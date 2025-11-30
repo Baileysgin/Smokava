@@ -163,7 +163,7 @@ if (!mongoUri) {
 mongoose.connect(mongoUri)
   .then(async () => {
     console.log('MongoDB connected');
-    
+
     // Ensure admin user exists and is protected
     try {
       const { ensureAdmin } = require('./scripts/ensureAdminFunction');

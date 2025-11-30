@@ -54,7 +54,7 @@ const ensureAdmin = async () => {
       console.log(`✅ Admin credentials saved to volume: ${ADMIN_CREDENTIALS_PATH}`);
     } else {
       console.log(`✅ Admin user already exists: ${adminUsername}`);
-      
+
       // If credentials are from volume but password might have changed, update volume
       if (credentialsFromVolume) {
         const credentials = {
@@ -76,4 +76,3 @@ const ensureAdmin = async () => {
 };
 
 module.exports = { ensureAdmin };
-
