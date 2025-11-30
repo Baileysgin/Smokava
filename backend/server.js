@@ -161,7 +161,18 @@ if (!mongoUri) {
 }
 
 mongoose.connect(mongoUri)
-  .then(() => console.log('MongoDB connected'))
+  .then(async () => {
+    console.log('MongoDB connected');
+    
+    // Ensure admin user exists and is protected
+    try {
+      const { ensureAdmin } = require('./scripts/ensureAdminFunction');
+      await ensureAdmin();
+    } catch (err) {
+      console.warn('⚠️  Could not ensure admin user:', err.message);
+      // Continue server startup - admin can be created manually if needed
+    }
+  })
   .catch(err => {
     console.error('MongoDB connection error:', err);
     process.exit(1);

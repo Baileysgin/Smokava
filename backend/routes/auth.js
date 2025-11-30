@@ -17,10 +17,10 @@ router.post('/send-otp', async (req, res) => {
 
     // Normalize phone number (handle +98, 0098 prefixes)
     phoneNumber = phoneNumber.trim().replace(/^\+98|^0098/, '0');
-    
+
     // Validate phone number format (should start with 09 for Iran)
     if (!/^09\d{9}$/.test(phoneNumber)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Invalid phone number format. Please use format: 09XXXXXXXXX',
         provided: req.body.phoneNumber
       });
@@ -148,11 +148,11 @@ router.post('/send-otp', async (req, res) => {
       code: error.code,
       name: error.name
     });
-    
+
     // Provide more specific error messages
     let statusCode = 500;
     let errorMessage = 'Failed to send OTP';
-    
+
     if (error.name === 'ValidationError') {
       statusCode = 400;
       errorMessage = 'Invalid phone number format';
@@ -164,10 +164,10 @@ router.post('/send-otp', async (req, res) => {
       statusCode = 502;
       errorMessage = 'SMS service temporarily unavailable. OTP may have been generated.';
     }
-    
-    res.status(statusCode).json({ 
-      message: errorMessage, 
-      error: process.env.NODE_ENV === 'production' ? undefined : error.message 
+
+    res.status(statusCode).json({
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 });

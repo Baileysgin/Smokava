@@ -19,6 +19,30 @@ const adminSchema = new mongoose.Schema({
   }
 });
 
+// Prevent deletion of admin users
+adminSchema.pre('remove', async function(next) {
+  console.warn('⚠️  Attempt to delete admin user prevented:', this.username);
+  throw new Error('Admin users cannot be deleted');
+});
+
+adminSchema.pre('deleteOne', async function(next) {
+  const admin = await this.model.findOne(this.getQuery());
+  if (admin) {
+    console.warn('⚠️  Attempt to delete admin user prevented:', admin.username);
+    throw new Error('Admin users cannot be deleted');
+  }
+  next();
+});
+
+adminSchema.pre('findOneAndDelete', async function(next) {
+  const admin = await this.model.findOne(this.getQuery());
+  if (admin) {
+    console.warn('⚠️  Attempt to delete admin user prevented:', admin.username);
+    throw new Error('Admin users cannot be deleted');
+  }
+  next();
+});
+
 // Hash password before saving
 adminSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
