@@ -1,21 +1,13 @@
-# ⚡ ADD GITHUB SECRETS NOW - Quick Action
+# 🔑 Add GitHub Secrets NOW - Copy & Paste
 
-## 🎯 One-Time Setup (Takes 2 minutes)
+## ⚡ Quick Setup (2 minutes)
 
-### Step 1: Go to GitHub Secrets Page
+### Step 1: Add SSH_PRIVATE_KEY
 
-**Click this link:** https://github.com/Baileysgin/Smokava/settings/secrets/actions
-
-### Step 2: Add 3 Secrets
-
-Click **"New repository secret"** for each:
-
----
-
-#### Secret 1: SSH_PRIVATE_KEY
-
-1. **Name:** `SSH_PRIVATE_KEY`
-2. **Value:** Copy and paste this entire block:
+1. **Open**: https://github.com/Baileysgin/Smokava/settings/secrets/actions
+2. **Click**: "New repository secret"
+3. **Name**: `SSH_PRIVATE_KEY`
+4. **Value**: Copy the ENTIRE private key below:
 
 ```
 -----BEGIN OPENSSH PRIVATE KEY-----
@@ -27,52 +19,43 @@ AAAEAp3Oq9z1mrBQ3k45h/KrjauZSjwOUz94QtTj9Pd6OCh4zvQFTtnH7l+4EAWc3KiNwP
 -----END OPENSSH PRIVATE KEY-----
 ```
 
-3. Click **"Add secret"**
+5. **Click**: "Add secret"
 
----
+### Step 2: Add SSH_HOST
 
-#### Secret 2: SSH_HOST
+1. **Click**: "New repository secret" (again)
+2. **Name**: `SSH_HOST`
+3. **Value**: `root@91.107.241.245`
+4. **Click**: "Add secret"
 
-1. **Name:** `SSH_HOST`
-2. **Value:**
-```
-root@91.107.241.245
-```
-3. Click **"Add secret"**
+### Step 3: Verify Public Key is on Server
 
----
-
-#### Secret 3: API_URL
-
-1. **Name:** `API_URL`
-2. **Value:**
-```
-https://api.smokava.com
-```
-3. Click **"Add secret"**
-
----
-
-## ✅ Done!
-
-After adding all 3 secrets, automatic deployment is enabled!
-
-### Test It:
+Run this to ensure the public key is on your server:
 
 ```bash
-./scripts/push-to-git.sh "test: Test automatic deployment"
+cat ~/.ssh/github_actions_smokava.pub | ssh root@91.107.241.245 "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
 ```
 
-Then check: https://github.com/Baileysgin/Smokava/actions
+### Step 4: Trigger Deployment
 
----
+After adding both secrets:
 
-## 📋 Quick Links
+1. Go to: https://github.com/Baileysgin/Smokava/actions
+2. Click "Re-run jobs" on the failed workflow
+3. ✅ Deployment will start automatically!
 
-- **Add Secrets:** https://github.com/Baileysgin/Smokava/settings/secrets/actions
-- **View Actions:** https://github.com/Baileysgin/Smokava/actions
-- **Repository:** https://github.com/Baileysgin/Smokava
+## ✅ Checklist
 
----
+- [ ] SSH_PRIVATE_KEY added to GitHub
+- [ ] SSH_HOST added to GitHub  
+- [ ] Public key added to server
+- [ ] Re-run the failed workflow
 
-**That's it! Once you add these 3 secrets, every push will automatically deploy.** 🚀
+## 🚀 That's it!
+
+The deployment will automatically:
+- Connect to server via SSH
+- Pull latest code
+- Rebuild admin panel
+- Deploy all services
+- Run health checks
