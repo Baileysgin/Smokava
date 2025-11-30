@@ -19,6 +19,18 @@ if [ ! -f "docker-compose.yml" ]; then
     exit 1
 fi
 
+# Determine docker compose command
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+    echo -e "${GREEN}✅ Using 'docker compose' (new syntax)${NC}"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+    echo -e "${GREEN}✅ Using 'docker-compose' (legacy syntax)${NC}"
+else
+    echo -e "${RED}❌ Error: Neither 'docker compose' nor 'docker-compose' found!${NC}"
+    exit 1
+fi
+
 # Step 1: Create backup
 echo -e "${YELLOW}📦 Step 1: Creating database backup...${NC}"
 if [ -f "scripts/db-backup.sh" ]; then
@@ -40,18 +52,18 @@ echo -e "${YELLOW}🔨 Step 3: Building and deploying services...${NC}"
 
 # Deploy backend
 echo -e "${GREEN}→ Deploying backend...${NC}"
-docker-compose build backend
-docker-compose up -d --no-deps backend
+$DOCKER_COMPOSE_CMD build backend
+$DOCKER_COMPOSE_CMD up -d --no-deps backend
 
 # Deploy frontend
 echo -e "${GREEN}→ Deploying frontend...${NC}"
-docker-compose build frontend
-docker-compose up -d --no-deps frontend
+$DOCKER_COMPOSE_CMD build frontend
+$DOCKER_COMPOSE_CMD up -d --no-deps frontend
 
 # Deploy admin panel
 echo -e "${GREEN}→ Deploying admin panel...${NC}"
-docker-compose build admin-panel
-docker-compose up -d --no-deps admin-panel
+$DOCKER_COMPOSE_CMD build admin-panel
+$DOCKER_COMPOSE_CMD up -d --no-deps admin-panel
 
 # Step 4: Wait for services to start
 echo -e "${YELLOW}⏳ Step 4: Waiting for services to start...${NC}"
@@ -83,19 +95,19 @@ if curl -f "${HEALTH_URL}" > /dev/null 2>&1; then
 else
     echo -e "${YELLOW}⚠️  Health check failed, checking container status...${NC}"
     # Check if container is running instead
-    if docker-compose ps | grep -q "backend.*Up"; then
+    if $DOCKER_COMPOSE_CMD ps | grep -q "backend.*Up"; then
         echo -e "${GREEN}✅ Backend container is running${NC}"
     else
         echo -e "${RED}❌ Backend container is not running${NC}"
         echo -e "${YELLOW}Checking logs...${NC}"
-        docker-compose logs --tail=50 backend
+        $DOCKER_COMPOSE_CMD logs --tail=50 backend
         exit 1
     fi
 fi
 
 # Check if services are running
 echo -e "${YELLOW}📊 Checking service status...${NC}"
-docker-compose ps
+$DOCKER_COMPOSE_CMD ps
 
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
 echo ""
@@ -115,7 +127,7 @@ else
 fi
 echo ""
 echo -e "${YELLOW}To view logs:${NC}"
-echo "  docker-compose logs -f [service-name]"
+echo "  $DOCKER_COMPOSE_CMD logs -f [service-name]"
 echo ""
 echo -e "${YELLOW}To check health:${NC}"
 echo "  curl ${HEALTH_URL}"
