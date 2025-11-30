@@ -12,12 +12,15 @@ echo ""
 # Server details
 SERVER="${SSH_HOST:-root@91.107.241.245}"
 REMOTE_DIR="/opt/smokava"
-SSH_PASS="${SSH_PASSWORD:-}"
+SSH_PASS="${SSH_PASSWORD:-pqwRU4qhpVW7}"
 
-# SSH command with optional password
+# SSH command with password support
 SSH_CMD="ssh"
 if [ -n "$SSH_PASS" ] && command -v sshpass > /dev/null 2>&1; then
     SSH_CMD="sshpass -p '$SSH_PASS' ssh"
+    SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=20"
+else
+    SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
 fi
 
 # Colors
@@ -48,7 +51,7 @@ fi
 
 # Step 3: Check server connection
 echo -e "${YELLOW}🔍 Step 2: Checking server connection...${NC}"
-if ! $SSH_CMD -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$SERVER" "echo 'connected'" > /dev/null 2>&1; then
+if ! $SSH_CMD $SSH_OPTS "$SERVER" "echo 'connected'" > /dev/null 2>&1; then
     echo -e "${RED}❌ Cannot connect to server: $SERVER${NC}"
     echo "   Check: SSH key, server address, network"
     exit 1
@@ -57,7 +60,7 @@ echo -e "${GREEN}✅ Server connection OK${NC}"
 
 # Step 4: Pull latest code on server
 echo -e "${YELLOW}📥 Step 3: Pulling latest code on server...${NC}"
-$SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
+$SSH_CMD $SSH_OPTS "$SERVER" "cd $REMOTE_DIR && \
     git fetch origin && \
     git reset --hard origin/main && \
     echo '✅ Code updated on server'"
@@ -70,14 +73,14 @@ ssh "$SERVER" "cd $REMOTE_DIR && bash scripts/db-backup.sh" || {
 
 # Step 6: Deploy services
 echo -e "${YELLOW}🔨 Step 5: Deploying services...${NC}"
-$SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
+$SSH_CMD $SSH_OPTS "$SERVER" "cd $REMOTE_DIR && \
     docker-compose build backend && \
     docker-compose up -d --no-deps backend && \
     echo '✅ Backend deployed'"
 
 # Step 7: Ensure admin user
 echo -e "${YELLOW}👤 Step 6: Ensuring admin user exists...${NC}"
-$SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
+$SSH_CMD $SSH_OPTS "$SERVER" "cd $REMOTE_DIR && \
     docker-compose exec -T backend node scripts/createAdmin.js admin admin123" || {
     echo -e "${YELLOW}⚠️  Admin creation had issues, but continuing...${NC}"
 }
