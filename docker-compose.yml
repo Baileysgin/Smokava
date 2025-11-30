@@ -50,8 +50,6 @@ services:
       - ./backend:/app
       - /app/node_modules
       - admin_data:/app/data
-    environment:
-      - ADMIN_CREDENTIALS_PATH=/app/data/admin-credentials.json
 
   frontend:
     build:
