@@ -176,6 +176,27 @@ The dashboard shows:
 - Total shishas consumed
 - Recent users (last 7 days)
 
+## Public Profile Sharing
+
+Users can share their profiles via:
+- Public profile URL: `/u/:username` or `/user/:userId`
+- Share button in profile page
+- Invite links (generated via API)
+
+### Generating Invite Links
+
+```bash
+POST /api/users/:id/invite
+# Returns: { inviteUrl, token, expiresIn }
+```
+
+## Follow System
+
+Users can follow each other:
+- Public profiles: Direct follow
+- Private profiles: Follow request (pending until accepted)
+- Follow requests stored in `follow_requests` collection
+
 ## Best Practices
 
 1. **Always log moderation actions** with reasons
@@ -184,6 +205,8 @@ The dashboard shows:
 4. **Monitor user activity** through statistics
 5. **Regular backups** (automated hourly)
 6. **Review moderation logs** regularly
+7. **Verify role assignments** before granting access
+8. **Monitor time-window usage** for packages
 
 ## Troubleshooting
 

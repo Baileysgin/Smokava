@@ -1,19 +1,22 @@
 // Service Worker for Smokava PWA
+// Lightweight caching for static assets
+
 const CACHE_NAME = 'smokava-v1';
 const STATIC_ASSETS = [
   '/',
+  '/manifest.json',
   '/logo-icon.svg',
-  '/logo.svg',
-  '/manifest.json'
+  '/logo.svg'
 ];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS);
+    })
   );
+  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
@@ -22,14 +25,15 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .filter((cacheName) => cacheName !== CACHE_NAME)
+          .map((cacheName) => caches.delete(cacheName))
       );
-    }).then(() => self.clients.claim())
+    })
   );
+  self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') {
@@ -37,23 +41,31 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
+    caches.match(event.request).then((response) => {
+      // Return cached version if available
+      if (response) {
+        return response;
+      }
+
+      // Otherwise fetch from network
+      return fetch(event.request).then((response) => {
+        // Don't cache if not a valid response
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+
         // Clone the response
         const responseToCache = response.clone();
 
-        // Cache successful responses
-        if (response.status === 200) {
+        // Cache static assets only
+        if (STATIC_ASSETS.some((asset) => event.request.url.includes(asset))) {
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
         }
 
         return response;
-      })
-      .catch(() => {
-        // Fallback to cache if network fails
-        return caches.match(event.request);
-      })
+      });
+    })
   );
 });

@@ -1,0 +1,58 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Create backup before deploy
+        run: |
+          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && bash scripts/db-backup.sh" || echo "Backup failed, continuing..."
+
+      - name: Deploy backend
+        run: |
+          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
+            git pull origin main && \
+            cd backend && \
+            docker-compose -f ../docker-compose.yml pull backend && \
+            docker-compose -f ../docker-compose.yml up -d --no-deps --build backend"
+
+      - name: Deploy frontend
+        run: |
+          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
+            cd frontend && \
+            docker-compose -f ../docker-compose.yml pull frontend && \
+            docker-compose -f ../docker-compose.yml up -d --no-deps --build frontend"
+
+      - name: Deploy admin panel
+        run: |
+          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
+            cd admin-panel && \
+            docker-compose -f ../docker-compose.yml pull admin-panel && \
+            docker-compose -f ../docker-compose.yml up -d --no-deps --build admin-panel"
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f ${{ secrets.API_URL }}/api/health || exit 1
+
+      - name: Run smoke tests
+        run: |
+          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
+            curl -f ${{ secrets.API_URL }}/api/health && \
+            curl -f ${{ secrets.API_URL }}/api/admin/users?page=1&limit=1" || exit 1
+

@@ -142,4 +142,14 @@ export const usePackageStore = create<PackageState>((set, get) => ({
       throw error;
     }
   },
+
+  getPackageRemainingTime: async (userId: string, packageId: string) => {
+    try {
+      const response = await api.get(`/packages/wallet/${userId}/packages/${packageId}/remaining-time`);
+      return response.data;
+    } catch (error) {
+      console.error('Get package remaining time error:', error);
+      throw error;
+    }
+  },
 }));

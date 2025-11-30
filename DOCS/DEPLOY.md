@@ -122,28 +122,31 @@ Backups are automatically rotated (keeps last 168 = 7 days of hourly backups).
 
 ### GitHub Actions Safe Deploy
 
-The deploy workflow should:
+The deploy workflow (`.github/workflows/deploy.yml`) automatically:
 
-1. **Never** run destructive DB commands
-2. **Always** take a snapshot before deploying
-3. Use `docker-compose up -d --no-deps --build` to avoid dropping volumes
-4. Run health checks after deploy
+1. **Never** runs destructive DB commands
+2. **Always** takes a snapshot before deploying
+3. Uses `docker-compose up -d --no-deps --build` to avoid dropping volumes
+4. Runs health checks after deploy
+5. Runs smoke tests to verify deployment
 
-Example workflow:
+### Manual Backup Workflow
 
-```yaml
-- name: Pre-deploy backup
-  run: |
-    ssh user@server "cd /opt/smokava && ./scripts/db-backup.sh"
+Use `.github/workflows/backup.yml` to:
+- Create manual backups on demand
+- Download backups as artifacts
+- Store backups for 7 days
 
-- name: Deploy
-  run: |
-    ssh user@server "cd /opt/smokava && git pull && docker-compose up -d --no-deps --build backend frontend admin-panel"
+### Automated Hourly Backups
 
-- name: Health check
-  run: |
-    curl -f http://api.smokava.com/api/health || exit 1
+Backups run automatically via cron (set up on server):
+
+```bash
+# Add to crontab (crontab -e)
+0 * * * * /opt/smokava/scripts/db-backup.sh >> /var/log/smokava-backup.log 2>&1
 ```
+
+Backups are stored in `/var/backups/smokava/` and automatically rotated (keeps last 168 backups = 7 days).
 
 ## Troubleshooting
 

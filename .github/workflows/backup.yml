@@ -1,0 +1,32 @@
+name: Manual Backup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Create backup
+        run: |
+          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && bash scripts/db-backup.sh"
+
+      - name: Download backup
+        run: |
+          scp ${{ secrets.SSH_HOST }}:/var/backups/smokava/smokava_backup_*.gz ./backup.gz || echo "No backup file found"
+          ls -lh backup.gz || echo "Backup file not found"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: database-backup
+          path: backup.gz
+          retention-days: 7
+
