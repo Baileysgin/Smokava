@@ -49,6 +49,7 @@ interface PackageState {
   submitRating: (data: { restaurantId: string; operatorId?: string; packageId?: string; redeemLogId: string; rating: number; isGift?: boolean }) => Promise<void>;
   getPendingRating: () => Promise<{ pending: { redeemLogId: string; restaurantId: string; restaurantName: string; operatorId?: string; packageId: string; isGift: boolean; consumedAt: string } | null; count: number }>;
   getUnratedConsumptions: () => Promise<{ consumptions: Array<{ redeemLogId: string; restaurantId: string; restaurantName: string; operatorId?: string; packageId: string; isGift: boolean; consumedAt: string; count: number; flavor: string }>; count: number }>;
+  getPackageRemainingTime: (userId: string, packageId: string) => Promise<any>;
 }
 
 export const usePackageStore = create<PackageState>((set, get) => ({
