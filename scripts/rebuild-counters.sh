@@ -5,7 +5,7 @@
 
 set -e
 
-API_URL="${API_URL:-http://localhost:5000/api}"
+API_URL="${API_URL:-https://api.smokava.com/api}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 if [ -z "$ADMIN_TOKEN" ]; then

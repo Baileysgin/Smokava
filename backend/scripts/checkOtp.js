@@ -4,7 +4,7 @@ const User = require('../models/User');
 
 const checkOtp = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava');
     console.log('✅ MongoDB connected');
 
     const phoneNumber = process.argv[2] || '09302593819';

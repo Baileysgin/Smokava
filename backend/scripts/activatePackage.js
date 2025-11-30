@@ -6,7 +6,7 @@ const UserPackage = require('../models/UserPackage');
 
 const activatePackage = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava');
     console.log('✅ MongoDB connected');
 
     const phoneNumber = process.argv[2] || '09385008571';

@@ -127,7 +127,7 @@ const restaurants = [
 
 async function seed() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava');
     console.log('Connected to MongoDB');
 
     // Safety check: Only clear data if explicitly requested via CLEAR_DATA=true

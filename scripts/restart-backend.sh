@@ -62,4 +62,3 @@ fi
 
 echo ""
 echo "✅ Backend restart complete!"
-

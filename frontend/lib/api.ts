@@ -16,14 +16,9 @@ const getApiUrl = (): string => {
     return apiUrl;
   }
 
-  // Only allow localhost fallback in development mode
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('⚠️ NEXT_PUBLIC_API_URL not set, using development fallback');
-    return 'http://localhost:5000/api';
-  }
-
-  // In production, throw error if not set
-  throw new Error('NEXT_PUBLIC_API_URL environment variable is required in production');
+  // No localhost fallback - environment variable is required
+  console.error('❌ NEXT_PUBLIC_API_URL environment variable is required');
+  throw new Error('NEXT_PUBLIC_API_URL environment variable must be set. No localhost fallback allowed.');
 };
 
 const API_URL = getApiUrl();

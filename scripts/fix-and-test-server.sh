@@ -78,7 +78,7 @@ if echo "$ADMIN_LOGIN" | grep -q "token"; then
     ADMIN_TOKEN=$(echo "$ADMIN_LOGIN" | python3 -c "import sys, json; print(json.load(sys.stdin).get('token', ''))" 2>/dev/null || echo "")
     if [ -n "$ADMIN_TOKEN" ]; then
         echo "      ✅ Token received"
-        
+
         # Test admin dashboard
         echo "   - Admin dashboard..."
         DASHBOARD=$(curl -s "${API_URL}/api/admin/dashboard/stats" \
@@ -130,4 +130,3 @@ echo ""
 echo "📋 Summary:"
 echo "   Check results above for any ❌ failures"
 echo "   If MongoDB is disconnected, restart services on server"
-

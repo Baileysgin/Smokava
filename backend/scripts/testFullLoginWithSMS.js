@@ -15,7 +15,7 @@ async function testFullLoginFlow() {
 
   try {
     // Connect to MongoDB
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava';
     await mongoose.connect(mongoUri);
     console.log('✅ Connected to MongoDB\n');
 

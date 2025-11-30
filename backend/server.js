@@ -10,11 +10,10 @@ const app = express();
 app.use(cors({
   origin: function (origin, callback) {
     // Development origins (only in development)
-    // Use environment variables if provided, otherwise use localhost defaults
-    const devOrigins = process.env.NODE_ENV === 'development'
-      ? (process.env.DEV_ORIGINS
-          ? process.env.DEV_ORIGINS.split(',').map(url => url.trim())
-          : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'])
+    // Use environment variables only - no localhost defaults
+    // Development origins - only if explicitly set via DEV_ORIGINS
+    const devOrigins = process.env.NODE_ENV === 'development' && process.env.DEV_ORIGINS
+      ? process.env.DEV_ORIGINS.split(',').map(url => url.trim())
       : [];
 
     // Production origins from environment variables
@@ -153,7 +152,7 @@ app.use('/api/rating', require('./routes/ratings'));
 // MONGODB_URI must be set in production
 const mongoUri = process.env.MONGODB_URI || (process.env.NODE_ENV === 'production'
   ? null
-  : 'mongodb://localhost:27017/smokava');
+  : 'mongodb://mongodb:27017/smokava');
 
 if (!mongoUri) {
   console.error('❌ MONGODB_URI environment variable is required in production');

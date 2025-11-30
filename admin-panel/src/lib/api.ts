@@ -22,7 +22,7 @@ const getApiUrl = (): string => {
       apiUrl = 'https://api.smokava.com/api';
     } else {
       console.warn('⚠️ VITE_API_URL not set, using development fallback');
-      apiUrl = 'http://localhost:5000/api';
+      // No localhost fallback - must use environment variable
     }
   }
 

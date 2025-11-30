@@ -14,7 +14,7 @@ services:
     networks:
       - smokava-network
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: echo 'db.runCommand("ping").ok' | mongosh mongodb:27017/test --quiet
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,7 +36,7 @@ services:
       - KAVENEGAR_TEMPLATE=${KAVENEGAR_TEMPLATE:-otp-v2}
       - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
       - API_BASE_URL=${API_BASE_URL:-https://api.smokava.com}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://smokava.com,https://www.smokava.com,https://admin.smokava.com,http://localhost:3000,http://localhost:5173}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://smokava.com,https://www.smokava.com,https://admin.smokava.com}
       - FRONTEND_URL=${FRONTEND_URL:-https://smokava.com}
       - ADMIN_PANEL_URL=${ADMIN_PANEL_URL:-https://admin.smokava.com}
       - OTP_DEBUG_SECRET_KEY=${OTP_DEBUG_SECRET_KEY:-smokava-otp-debug-2024}

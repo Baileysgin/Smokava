@@ -7,7 +7,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const UserPackage = require('../models/UserPackage');
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava';
+const mongoUri = process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava';
 
 async function addRedeemLogIds() {
   try {

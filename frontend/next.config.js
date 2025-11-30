@@ -10,8 +10,7 @@ const nextConfig = {
         : []),
       // Add custom domain if provided
       ...(process.env.NEXT_PUBLIC_IMAGE_DOMAIN ? [process.env.NEXT_PUBLIC_IMAGE_DOMAIN] : []),
-      // Only add localhost in development
-      ...(process.env.NODE_ENV === 'development' ? ['localhost'] : []),
+      // No localhost - use NEXT_PUBLIC_IMAGE_DOMAIN for development images
     ].filter(Boolean),
   },
   env: {

@@ -4,7 +4,7 @@ const Admin = require('../models/Admin');
 
 const createAdmin = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava');
     console.log('MongoDB connected');
 
     const username = process.argv[2] || 'admin';

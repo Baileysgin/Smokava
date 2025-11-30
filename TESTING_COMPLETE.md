@@ -68,7 +68,7 @@
     .then(async () => {
       console.log('MongoDB connected');
       // ... ensure admin user ...
-      
+
       // Start server only after MongoDB is connected
       app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
@@ -166,4 +166,3 @@ To verify everything is working:
 **Status**: ✅ All systems operational
 **Date**: 2025-11-30
 **Tested By**: Automated testing scripts
-

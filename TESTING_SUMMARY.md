@@ -158,4 +158,3 @@ If issues persist after MongoDB fix:
 - Once MongoDB is fixed, all endpoints should work
 - Admin user is auto-created on backend startup
 - All features are implemented and ready to test
-

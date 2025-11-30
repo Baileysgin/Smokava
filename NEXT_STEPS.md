@@ -143,4 +143,3 @@ Everything has been implemented and deployed. The system is ready for use!
 - Password: `admin123`
 
 **⚠️ Remember to change the admin password after first login!**
-

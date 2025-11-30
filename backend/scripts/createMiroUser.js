@@ -4,7 +4,7 @@ const User = require('../models/User');
 
 async function createMiroUser() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava');
     console.log('✅ Connected to MongoDB');
 
     const phoneNumber = '09385008571';

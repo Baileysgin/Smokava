@@ -114,4 +114,3 @@ sleep 10
 docker compose exec backend node scripts/createAdmin.js admin admin123
 curl https://api.smokava.com/api/health
 ```
-
