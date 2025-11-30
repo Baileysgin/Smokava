@@ -84,7 +84,7 @@ SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
 # Step 7: Ensure admin user
 echo -e "${YELLOW}👤 Step 6: Ensuring admin user exists...${NC}"
 SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
-    docker-compose exec -T backend node scripts/createAdmin.js admin admin123" || {
+    (docker compose exec -T backend node scripts/createAdmin.js admin admin123 2>/dev/null || docker-compose exec -T backend node scripts/createAdmin.js admin admin123)" || {
     echo -e "${YELLOW}⚠️  Admin creation had issues, but continuing...${NC}"
 }
 
