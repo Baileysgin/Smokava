@@ -160,7 +160,20 @@ if (!mongoUri) {
   process.exit(1);
 }
 
-mongoose.connect(mongoUri)
+// Configure mongoose connection options
+mongoose.set('bufferCommands', false); // Disable mongoose buffering
+mongoose.set('bufferMaxEntries', 0); // Disable mongoose buffering
+
+mongoose.connect(mongoUri, {
+  serverSelectionTimeoutMS: 30000, // 30 seconds
+  socketTimeoutMS: 45000, // 45 seconds
+  connectTimeoutMS: 30000, // 30 seconds
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  minPoolSize: 2, // Maintain at least 2 socket connections
+  maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+  retryWrites: true,
+  w: 'majority'
+})
   .then(async () => {
     console.log('MongoDB connected');
 
