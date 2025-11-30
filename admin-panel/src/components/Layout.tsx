@@ -11,6 +11,7 @@ import {
   GiftOutlined,
   StarOutlined,
   PlusCircleOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
 
@@ -66,6 +67,11 @@ const Layout = () => {
       key: '/ratings',
       icon: <StarOutlined />,
       label: 'نظرات و امتیازها',
+    },
+    {
+      key: '/moderation',
+      icon: <EditOutlined />,
+      label: 'مدیریت پست‌ها و نظرات',
     },
   ];
 

@@ -45,6 +45,29 @@ const userPackageSchema = new mongoose.Schema({
     enum: ['pending', 'active', 'expired'],
     default: 'active'
   },
+  // Time-based activation fields
+  startDate: {
+    type: Date,
+    default: null
+  },
+  endDate: {
+    type: Date,
+    default: null
+  },
+  timeWindows: [{
+    start: {
+      type: String, // Format: "HH:mm"
+      required: true
+    },
+    end: {
+      type: String, // Format: "HH:mm"
+      required: true
+    },
+    timezone: {
+      type: String,
+      default: 'Asia/Tehran'
+    }
+  }],
   history: [{
     restaurant: {
       type: mongoose.Schema.Types.ObjectId,

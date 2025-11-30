@@ -113,6 +113,32 @@ app.get('/', (req, res) => {
   });
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+
+  let lastBackup = null;
+  const backupPath = process.env.BACKUP_PATH || '/var/backups/smokava';
+  const lastBackupFile = path.join(backupPath, 'last_backup.txt');
+
+  try {
+    if (fs.existsSync(lastBackupFile)) {
+      const timestamp = fs.readFileSync(lastBackupFile, 'utf8').trim();
+      lastBackup = timestamp;
+    }
+  } catch (error) {
+    // Ignore errors reading backup file
+  }
+
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    lastBackup: lastBackup
+  });
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/packages', require('./routes/packages'));

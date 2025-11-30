@@ -26,6 +26,7 @@ const PackageManagement = lazy(() => import('./pages/PackageManagement'));
 const ActivatePackage = lazy(() => import('./pages/ActivatePackage'));
 const Gifts = lazy(() => import('./pages/Gifts'));
 const Ratings = lazy(() => import('./pages/Ratings'));
+const Moderation = lazy(() => import('./pages/Moderation'));
 const OperatorDashboard = lazy(() => import('./pages/OperatorDashboard'));
 const OperatorRedeem = lazy(() => import('./pages/OperatorRedeem'));
 const OperatorHistory = lazy(() => import('./pages/OperatorHistory'));
@@ -135,6 +136,11 @@ function App() {
             <Route path="ratings" element={
               <Suspense fallback={<PageLoader />}>
                 <Ratings />
+              </Suspense>
+            } />
+            <Route path="moderation" element={
+              <Suspense fallback={<PageLoader />}>
+                <Moderation />
               </Suspense>
             } />
           </Route>

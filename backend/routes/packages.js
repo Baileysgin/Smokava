@@ -3,6 +3,7 @@ const router = express.Router();
 const Package = require('../models/Package');
 const UserPackage = require('../models/UserPackage');
 const auth = require('../middleware/auth');
+const moment = require('moment-timezone');
 
 // Get all packages
 router.get('/', async (req, res) => {
@@ -195,16 +196,93 @@ router.post('/verify-consumption-otp', async (req, res) => {
     // Find user packages with remaining credits
     const userPackages = await UserPackage.find({
       user: user._id,
-      remainingCount: { $gt: 0 }
+      remainingCount: { $gt: 0 },
+      status: 'active'
     }).sort({ purchasedAt: 1 }); // Use oldest packages first
+
+    // Validate time windows for each package
+    const now = moment.tz('Asia/Tehran');
+    const validPackages = [];
+
+    for (const userPackage of userPackages) {
+      // Check date range
+      if (userPackage.startDate && now.isBefore(moment(userPackage.startDate).tz('Asia/Tehran'))) {
+        continue; // Package not started yet
+      }
+      if (userPackage.endDate && now.isAfter(moment(userPackage.endDate).tz('Asia/Tehran'))) {
+        continue; // Package expired
+      }
+
+      // Check time windows
+      if (userPackage.timeWindows && userPackage.timeWindows.length > 0) {
+        const currentTime = now.format('HH:mm');
+        let inWindow = false;
+
+        for (const window of userPackage.timeWindows) {
+          const windowStart = window.start;
+          const windowEnd = window.end;
+
+          // Handle time comparison (e.g., "13:00" to "17:00")
+          if (windowStart <= windowEnd) {
+            // Normal window (e.g., 13:00 to 17:00)
+            inWindow = currentTime >= windowStart && currentTime <= windowEnd;
+          } else {
+            // Overnight window (e.g., 22:00 to 02:00)
+            inWindow = currentTime >= windowStart || currentTime <= windowEnd;
+          }
+
+          if (inWindow) break;
+        }
+
+        if (!inWindow) {
+          // Find next available window
+          let nextWindow = null;
+          for (const window of userPackage.timeWindows) {
+            const windowStart = window.start;
+            const today = now.clone().startOf('day');
+            const windowStartTime = today.clone().add(windowStart.split(':')[0], 'hours').add(windowStart.split(':')[1], 'minutes');
+
+            if (now.isBefore(windowStartTime)) {
+              nextWindow = windowStartTime;
+              break;
+            }
+          }
+
+          // If no window today, use first window tomorrow
+          if (!nextWindow && userPackage.timeWindows.length > 0) {
+            const firstWindow = userPackage.timeWindows[0];
+            nextWindow = now.clone().add(1, 'day').startOf('day')
+              .add(firstWindow.start.split(':')[0], 'hours')
+              .add(firstWindow.start.split(':')[1], 'minutes');
+          }
+
+          return res.status(403).json({
+            message: 'outside allowed timeframe',
+            reason: 'Package can only be used during specified time windows',
+            nextAvailableWindow: nextWindow ? nextWindow.toISOString() : null,
+            currentTime: now.format('HH:mm'),
+            timezone: 'Asia/Tehran'
+          });
+        }
+      }
+
+      validPackages.push(userPackage);
+    }
+
+    if (validPackages.length === 0) {
+      return res.status(403).json({
+        message: 'outside allowed timeframe',
+        reason: 'No active packages available in current time window'
+      });
+    }
 
     let remainingToDeduct = user.consumptionOtpCount;
     const consumedPackages = [];
     const mongoose = require('mongoose');
     const redeemLogId = new mongoose.Types.ObjectId(); // Generate unique ID for this redemption
 
-    // Deduct from packages
-    for (const userPackage of userPackages) {
+    // Deduct from packages (use validPackages instead of userPackages)
+    for (const userPackage of validPackages) {
       if (remainingToDeduct <= 0) break;
 
       const deductCount = Math.min(remainingToDeduct, userPackage.remainingCount);
@@ -277,6 +355,40 @@ router.post('/redeem', auth, async (req, res) => {
       return res.status(400).json({ message: 'Not enough shisha remaining' });
     }
 
+    // Validate time windows
+    const now = moment.tz('Asia/Tehran');
+    if (userPackage.startDate && now.isBefore(moment(userPackage.startDate).tz('Asia/Tehran'))) {
+      return res.status(403).json({ message: 'Package not active yet' });
+    }
+    if (userPackage.endDate && now.isAfter(moment(userPackage.endDate).tz('Asia/Tehran'))) {
+      return res.status(403).json({ message: 'Package expired' });
+    }
+
+    if (userPackage.timeWindows && userPackage.timeWindows.length > 0) {
+      const currentTime = now.format('HH:mm');
+      let inWindow = false;
+
+      for (const window of userPackage.timeWindows) {
+        const windowStart = window.start;
+        const windowEnd = window.end;
+
+        if (windowStart <= windowEnd) {
+          inWindow = currentTime >= windowStart && currentTime <= windowEnd;
+        } else {
+          inWindow = currentTime >= windowStart || currentTime <= windowEnd;
+        }
+
+        if (inWindow) break;
+      }
+
+      if (!inWindow) {
+        return res.status(403).json({
+          message: 'outside allowed timeframe',
+          reason: 'Package can only be used during specified time windows'
+        });
+      }
+    }
+
     userPackage.remainingCount -= count;
     userPackage.history.push({
       restaurant: restaurantId,
@@ -288,6 +400,133 @@ router.post('/redeem', auth, async (req, res) => {
     await userPackage.save();
     res.json(userPackage);
   } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get remaining time for a user package
+router.get('/wallet/:userId/packages/:id/remaining-time', auth, async (req, res) => {
+  try {
+    const { userId, id } = req.params;
+
+    // Verify user can access this package
+    if (req.user._id.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const userPackage = await UserPackage.findOne({
+      _id: id,
+      user: userId
+    }).populate('package', 'nameFa count');
+
+    if (!userPackage) {
+      return res.status(404).json({ message: 'Package not found' });
+    }
+
+    const now = moment.tz('Asia/Tehran');
+    let nextAvailableWindow = null;
+    let windowStatus = 'available';
+
+    // Check date range
+    if (userPackage.startDate && now.isBefore(moment(userPackage.startDate).tz('Asia/Tehran'))) {
+      windowStatus = 'not_started';
+      nextAvailableWindow = moment(userPackage.startDate).tz('Asia/Tehran').toISOString();
+    } else if (userPackage.endDate && now.isAfter(moment(userPackage.endDate).tz('Asia/Tehran'))) {
+      windowStatus = 'expired';
+    } else if (userPackage.timeWindows && userPackage.timeWindows.length > 0) {
+      const currentTime = now.format('HH:mm');
+      let inWindow = false;
+
+      for (const window of userPackage.timeWindows) {
+        const windowStart = window.start;
+        const windowEnd = window.end;
+
+        if (windowStart <= windowEnd) {
+          inWindow = currentTime >= windowStart && currentTime <= windowEnd;
+        } else {
+          inWindow = currentTime >= windowStart || currentTime <= windowEnd;
+        }
+
+        if (inWindow) {
+          windowStatus = 'available';
+          // Find when this window ends
+          const today = now.clone().startOf('day');
+          const windowEndTime = today.clone()
+            .add(windowEnd.split(':')[0], 'hours')
+            .add(windowEnd.split(':')[1], 'minutes');
+
+          if (now.isBefore(windowEndTime)) {
+            nextAvailableWindow = windowEndTime.toISOString();
+          } else {
+            // Window ends today, find next window
+            for (const nextWindow of userPackage.timeWindows) {
+              const nextStart = nextWindow.start;
+              const nextStartTime = today.clone()
+                .add(nextStart.split(':')[0], 'hours')
+                .add(nextStart.split(':')[1], 'minutes');
+
+              if (now.isBefore(nextStartTime)) {
+                nextAvailableWindow = nextStartTime.toISOString();
+                windowStatus = 'waiting';
+                break;
+              }
+            }
+
+            // If no window today, use first window tomorrow
+            if (!nextAvailableWindow && userPackage.timeWindows.length > 0) {
+              const firstWindow = userPackage.timeWindows[0];
+              nextAvailableWindow = now.clone().add(1, 'day').startOf('day')
+                .add(firstWindow.start.split(':')[0], 'hours')
+                .add(firstWindow.start.split(':')[1], 'minutes')
+                .toISOString();
+              windowStatus = 'waiting';
+            }
+          }
+          break;
+        }
+      }
+
+      if (!inWindow) {
+        windowStatus = 'waiting';
+        // Find next available window
+        for (const window of userPackage.timeWindows) {
+          const windowStart = window.start;
+          const today = now.clone().startOf('day');
+          const windowStartTime = today.clone()
+            .add(windowStart.split(':')[0], 'hours')
+            .add(windowStart.split(':')[1], 'minutes');
+
+          if (now.isBefore(windowStartTime)) {
+            nextAvailableWindow = windowStartTime.toISOString();
+            break;
+          }
+        }
+
+        if (!nextAvailableWindow && userPackage.timeWindows.length > 0) {
+          const firstWindow = userPackage.timeWindows[0];
+          nextAvailableWindow = now.clone().add(1, 'day').startOf('day')
+            .add(firstWindow.start.split(':')[0], 'hours')
+            .add(firstWindow.start.split(':')[1], 'minutes')
+            .toISOString();
+        }
+      }
+    }
+
+    const summary = {
+      remainingTokens: userPackage.remainingCount,
+      totalTokens: userPackage.totalCount,
+      windowStatus,
+      nextAvailableWindow,
+      currentTime: now.format('YYYY-MM-DD HH:mm:ss'),
+      timezone: 'Asia/Tehran',
+      timeWindows: userPackage.timeWindows || [],
+      startDate: userPackage.startDate || null,
+      endDate: userPackage.endDate || null
+    };
+
+    res.json(summary);
+  } catch (error) {
+    console.error('Get remaining time error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

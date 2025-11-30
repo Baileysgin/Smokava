@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const UserPackage = require('../models/UserPackage');
 const Post = require('../models/Post');
+const FollowRequest = require('../models/FollowRequest');
 const auth = require('../middleware/auth');
 
 // Update user profile
@@ -30,12 +31,49 @@ router.get('/stats', auth, async (req, res) => {
       return sum + (pkg.totalCount - pkg.remainingCount);
     }, 0);
 
-    const posts = await Post.find({ user: req.user._id });
+    // Calculate restaurants visited from history
+    const restaurantsVisited = new Set();
+    const flavors = new Set();
+    userPackages.forEach(pkg => {
+      if (pkg.history && pkg.history.length > 0) {
+        pkg.history.forEach(item => {
+          if (item.restaurant) {
+            restaurantsVisited.add(item.restaurant.toString());
+          }
+          if (item.flavor) {
+            flavors.add(item.flavor);
+          }
+        });
+      }
+    });
+
+    // Calculate days active (from first package purchase or first post)
+    const firstPackage = userPackages.length > 0
+      ? userPackages.sort((a, b) => new Date(a.purchasedAt) - new Date(b.purchasedAt))[0]
+      : null;
+    const posts = await Post.find({ user: req.user._id }).sort({ createdAt: 1 });
+    const firstPost = posts.length > 0 ? posts[0] : null;
+
+    let daysActive = 0;
+    if (firstPackage || firstPost) {
+      const startDate = firstPackage && firstPost
+        ? (new Date(firstPackage.purchasedAt) < new Date(firstPost.createdAt)
+            ? new Date(firstPackage.purchasedAt)
+            : new Date(firstPost.createdAt))
+        : (firstPackage ? new Date(firstPackage.purchasedAt) : new Date(firstPost.createdAt));
+      const daysDiff = Math.floor((new Date() - startDate) / (1000 * 60 * 60 * 24));
+      daysActive = Math.max(1, daysDiff);
+    }
+
+    const postsCount = await Post.countDocuments({ user: req.user._id, deletedAt: null, published: true });
 
     res.json({
       totalConsumed,
       totalPackages: userPackages.length,
-      totalPosts: posts.length
+      totalPosts: postsCount,
+      restaurantsVisited: restaurantsVisited.size,
+      diverseFlavors: flavors.size,
+      daysActive
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -67,13 +105,42 @@ router.post('/follow/:userId', auth, async (req, res) => {
       targetUser.followers = targetUser.followers.filter(
         id => id.toString() !== currentUser._id.toString()
       );
+      // Delete any pending follow request
+      await FollowRequest.findOneAndDelete({
+        requesterId: currentUser._id,
+        targetUserId: userId
+      });
     } else {
-      // Follow
-      if (!currentUser.following.includes(userId)) {
-        currentUser.following.push(userId);
-      }
-      if (!targetUser.followers.includes(currentUser._id)) {
-        targetUser.followers.push(currentUser._id);
+      // Check if profile is private
+      if (targetUser.isPrivate) {
+        // Create follow request
+        const existingRequest = await FollowRequest.findOne({
+          requesterId: currentUser._id,
+          targetUserId: userId,
+          status: 'pending'
+        });
+
+        if (!existingRequest) {
+          await FollowRequest.create({
+            requesterId: currentUser._id,
+            targetUserId: userId,
+            status: 'pending'
+          });
+        }
+
+        return res.json({
+          following: false,
+          pending: true,
+          message: 'Follow request sent'
+        });
+      } else {
+        // Public profile - follow directly
+        if (!currentUser.following.includes(userId)) {
+          currentUser.following.push(userId);
+        }
+        if (!targetUser.followers.includes(currentUser._id)) {
+          targetUser.followers.push(currentUser._id);
+        }
       }
     }
 
@@ -82,7 +149,8 @@ router.post('/follow/:userId', auth, async (req, res) => {
 
     res.json({
       following: !isFollowing,
-      followingCount: currentUser.following.length
+      followingCount: currentUser.following.length,
+      pending: false
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -323,6 +391,114 @@ router.post('/contacts', auth, async (req, res) => {
     }).select('firstName lastName username photoUrl phoneNumber telegramId');
 
     res.json(contacts);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Public profile endpoint (no auth required)
+router.get('/:id/public', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id)
+      .select('firstName lastName username photoUrl bio createdAt');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get public posts only
+    const posts = await Post.find({
+      user: id,
+      deletedAt: null,
+      published: true
+    })
+      .populate('restaurant', 'nameFa addressFa')
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select('caption imageUrl restaurant flavor createdAt likes');
+
+    // Get stats
+    const userPackages = await UserPackage.find({ user: id });
+    const totalConsumed = userPackages.reduce((sum, pkg) => {
+      return sum + (pkg.totalCount - pkg.remainingCount);
+    }, 0);
+
+    const restaurantsVisited = new Set();
+    userPackages.forEach(pkg => {
+      if (pkg.history && pkg.history.length > 0) {
+        pkg.history.forEach(item => {
+          if (item.restaurant) {
+            restaurantsVisited.add(item.restaurant.toString());
+          }
+        });
+      }
+    });
+
+    const postsCount = await Post.countDocuments({
+      user: id,
+      deletedAt: null,
+      published: true
+    });
+
+    // Get follower/following counts
+    const followerCount = user.followers?.length || 0;
+    const followingCount = user.following?.length || 0;
+
+    res.json({
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        photoUrl: user.photoUrl,
+        bio: user.bio,
+        createdAt: user.createdAt
+      },
+      stats: {
+        totalConsumed,
+        restaurantsVisited: restaurantsVisited.size,
+        totalPosts: postsCount,
+        followerCount,
+        followingCount
+      },
+      posts
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Generate invite link
+router.post('/:id/invite', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user is admin or operator
+    if (req.user.role !== 'admin' && req.user.role !== 'restaurant_operator' && req.user._id.toString() !== id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // Generate invite token (simple JWT-like token)
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: id, type: 'invite' },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '7d' }
+    );
+
+    const inviteUrl = `${process.env.FRONTEND_URL || 'https://smokava.com'}/invite/${token}`;
+
+    res.json({
+      inviteUrl,
+      token,
+      expiresIn: '7d'
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

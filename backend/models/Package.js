@@ -50,6 +50,25 @@ const packageSchema = new mongoose.Schema({
   package_icon: {
     type: String,
     default: ''
+  },
+  // Time-based activation fields
+  timeWindows: [{
+    start: {
+      type: String, // Format: "HH:mm" (e.g., "13:00")
+      required: true
+    },
+    end: {
+      type: String, // Format: "HH:mm" (e.g., "17:00")
+      required: true
+    },
+    timezone: {
+      type: String,
+      default: 'Asia/Tehran'
+    }
+  }],
+  durationDays: {
+    type: Number,
+    default: null // null means no expiry
   }
 });
 

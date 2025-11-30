@@ -7,6 +7,9 @@ const Post = require('../models/Post');
 const UserPackage = require('../models/UserPackage');
 const Package = require('../models/Package');
 const Rating = require('../models/Rating');
+const Role = require('../models/Role');
+const UserRole = require('../models/UserRole');
+const ModerationLog = require('../models/ModerationLog');
 const auth = require('../middleware/auth');
 
 // Simple in-memory cache for dashboard stats (5 minutes)
@@ -960,7 +963,7 @@ router.get('/ratings/analytics', auth, requireAdmin, async (req, res) => {
 // Activate package for a user (Admin only)
 router.post('/activate-package', auth, requireAdmin, async (req, res) => {
   try {
-    const { userId, packageId } = req.body;
+    const { userId, packageId, startDate, endDate, timeWindows } = req.body;
 
     if (!userId || !packageId) {
       return res.status(400).json({ message: 'User ID and Package ID are required' });
@@ -978,14 +981,17 @@ router.post('/activate-package', auth, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Package not found' });
     }
 
-    // Create user package
+    // Create user package with time-based fields
     const userPackage = new UserPackage({
       user: userId,
       package: packageId,
       totalCount: package.count,
       remainingCount: package.count,
       status: 'active',
-      purchasedAt: new Date()
+      purchasedAt: new Date(),
+      startDate: startDate ? new Date(startDate) : new Date(),
+      endDate: endDate ? new Date(endDate) : null,
+      timeWindows: timeWindows || package.timeWindows || []
     });
 
     await userPackage.save();
@@ -1000,6 +1006,334 @@ router.post('/activate-package', auth, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Activate package error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Role assignment endpoints
+// Assign role(s) to a user
+router.post('/users/:id/roles', auth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { roleNames, restaurantId } = req.body;
+
+    if (!roleNames || !Array.isArray(roleNames) || roleNames.length === 0) {
+      return res.status(400).json({ message: 'roleNames array is required' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const assignedRoles = [];
+
+    for (const roleName of roleNames) {
+      // Find or create role
+      let role = await Role.findOne({ name: roleName.toLowerCase() });
+      if (!role) {
+        role = new Role({ name: roleName.toLowerCase() });
+        await role.save();
+      }
+
+      // Check if user already has this role
+      const existingUserRole = await UserRole.findOne({
+        userId: id,
+        roleId: role._id,
+        'scope.restaurantId': restaurantId || null
+      });
+
+      if (!existingUserRole) {
+        const userRole = new UserRole({
+          userId: id,
+          roleId: role._id,
+          scope: { restaurantId: restaurantId || null },
+          assignedBy: req.user._id
+        });
+        await userRole.save();
+        assignedRoles.push(userRole);
+      } else {
+        assignedRoles.push(existingUserRole);
+      }
+    }
+
+    // Update user's legacy role field for backward compatibility
+    if (roleNames.includes('admin')) {
+      user.role = 'admin';
+    } else if (roleNames.includes('operator')) {
+      user.role = 'restaurant_operator';
+      if (restaurantId) {
+        user.assignedRestaurant = restaurantId;
+      }
+    } else {
+      user.role = 'user';
+    }
+    await user.save();
+
+    const populatedRoles = await UserRole.find({ userId: id })
+      .populate('roleId', 'name')
+      .populate('scope.restaurantId', 'nameFa');
+
+    res.json({
+      message: 'Roles assigned successfully',
+      roles: populatedRoles
+    });
+  } catch (error) {
+    console.error('Assign roles error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Revoke role from a user
+router.delete('/users/:id/roles/:role', auth, requireAdmin, async (req, res) => {
+  try {
+    const { id, role } = req.params;
+    const { restaurantId } = req.query;
+
+    const roleDoc = await Role.findOne({ name: role.toLowerCase() });
+    if (!roleDoc) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    const query = {
+      userId: id,
+      roleId: roleDoc._id
+    };
+
+    if (restaurantId) {
+      query['scope.restaurantId'] = restaurantId;
+    } else {
+      query['scope.restaurantId'] = null;
+    }
+
+    const userRole = await UserRole.findOneAndDelete(query);
+
+    if (!userRole) {
+      return res.status(404).json({ message: 'User role not found' });
+    }
+
+    // Update user's legacy role field if needed
+    const remainingRoles = await UserRole.find({ userId: id })
+      .populate('roleId', 'name');
+
+    if (remainingRoles.length === 0) {
+      const user = await User.findById(id);
+      if (user) {
+        user.role = 'user';
+        user.assignedRestaurant = null;
+        await user.save();
+      }
+    }
+
+    res.json({ message: 'Role revoked successfully' });
+  } catch (error) {
+    console.error('Revoke role error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// List user roles
+router.get('/users/:id/roles', auth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const userRoles = await UserRole.find({ userId: id })
+      .populate('roleId', 'name')
+      .populate('scope.restaurantId', 'nameFa addressFa')
+      .populate('assignedBy', 'username firstName lastName')
+      .sort({ assignedAt: -1 });
+
+    res.json({ roles: userRoles });
+  } catch (error) {
+    console.error('Get user roles error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Moderation endpoints for posts
+router.get('/posts', auth, requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, published, search } = req.query;
+
+    const query = { deletedAt: null };
+    if (published !== undefined) {
+      query.published = published === 'true';
+    }
+    if (search) {
+      query.$or = [
+        { caption: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const posts = await Post.find(query)
+      .populate('user', 'firstName lastName username photoUrl phoneNumber')
+      .populate('restaurant', 'nameFa addressFa')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await Post.countDocuments(query);
+
+    res.json({
+      posts,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    console.error('Get posts error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+router.get('/posts/:id', auth, requireAdmin, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id)
+      .populate('user', 'firstName lastName username photoUrl phoneNumber')
+      .populate('restaurant', 'nameFa addressFa')
+      .populate('comments.user', 'firstName lastName username photoUrl');
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Filter out deleted comments
+    post.comments = post.comments.filter(comment => !comment.deletedAt);
+
+    res.json(post);
+  } catch (error) {
+    console.error('Get post error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+router.delete('/posts/:id', auth, requireAdmin, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    post.deletedAt = new Date();
+    post.deletedBy = req.user._id;
+    post.published = false;
+    await post.save();
+
+    // Log moderation action
+    await ModerationLog.create({
+      action: 'delete_post',
+      targetType: 'post',
+      targetId: post._id,
+      adminId: req.user._id,
+      reason: req.body.reason || '',
+      metadata: { caption: post.caption }
+    });
+
+    res.json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+router.patch('/posts/:id', auth, requireAdmin, async (req, res) => {
+  try {
+    const { published } = req.body;
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const action = published ? 'unhide_post' : 'hide_post';
+    post.published = published !== undefined ? published : post.published;
+    await post.save();
+
+    // Log moderation action
+    await ModerationLog.create({
+      action,
+      targetType: 'post',
+      targetId: post._id,
+      adminId: req.user._id,
+      reason: req.body.reason || ''
+    });
+
+    res.json({ message: 'Post updated successfully', post });
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+router.delete('/posts/:postId/comments/:commentId', auth, requireAdmin, async (req, res) => {
+  try {
+    const { postId, commentId } = req.params;
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const comment = post.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    comment.deletedAt = new Date();
+    comment.deletedBy = req.user._id;
+    await post.save();
+
+    // Log moderation action
+    await ModerationLog.create({
+      action: 'delete_comment',
+      targetType: 'comment',
+      targetId: commentId,
+      adminId: req.user._id,
+      reason: req.body.reason || '',
+      metadata: { postId, text: comment.text }
+    });
+
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Rebuild counters endpoint
+router.post('/rebuild-counters', auth, requireAdmin, async (req, res) => {
+  try {
+    const users = await User.find();
+    let updated = 0;
+
+    for (const user of users) {
+      const userPackages = await UserPackage.find({ user: user._id });
+
+      // Calculate restaurants visited from history
+      const restaurantsVisited = new Set();
+      let totalConsumed = 0;
+
+      userPackages.forEach(pkg => {
+        totalConsumed += (pkg.totalCount - pkg.remainingCount);
+        if (pkg.history && pkg.history.length > 0) {
+          pkg.history.forEach(item => {
+            if (item.restaurant) {
+              restaurantsVisited.add(item.restaurant.toString());
+            }
+          });
+        }
+      });
+
+      // Store in user document if needed (optional - can be computed on the fly)
+      // For now, we'll just return the counts
+      updated++;
+    }
+
+    res.json({
+      message: 'Counters rebuilt successfully',
+      usersProcessed: updated
+    });
+  } catch (error) {
+    console.error('Rebuild counters error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

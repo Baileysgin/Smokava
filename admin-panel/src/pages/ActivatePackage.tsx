@@ -70,7 +70,7 @@ const ActivatePackage = () => {
       await adminService.activatePackage(values.userId, values.packageId);
       message.success('پکیج با موفقیت برای کاربر فعال شد');
       form.resetFields();
-      
+
       // Reload users to show updated package count
       loadUsers();
     } catch (error: any) {
