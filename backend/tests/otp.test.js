@@ -22,7 +22,10 @@ describe('OTP Tests', () => {
   let testUser;
 
   beforeAll(async () => {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava_test';
+    // Use MONGODB_URI from environment (server MongoDB) or default to server service name
+    // Replace database name with test database
+    const baseUri = process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava';
+    const mongoUri = baseUri.replace(/\/[^\/]+$/, '/smokava_test');
     await mongoose.connect(mongoUri);
 
     app = express();

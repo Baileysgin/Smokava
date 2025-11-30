@@ -57,7 +57,7 @@ describe('Backup Script Tests', () => {
         .replace(/[-:]/g, '')
         .replace(/\..+/, '')
         .replace('T', '_');
-      
+
       const backupFile = `smokava_backup_${timestamp}.gz`;
       expect(backupFile).toMatch(/^smokava_backup_\d{8}_\d{6}\.gz$/);
     });
@@ -79,7 +79,7 @@ describe('Backup Script Tests', () => {
     test('should keep correct number of backups', () => {
       const retentionDays = 7;
       const retentionHours = retentionDays * 24;
-      
+
       // Should keep last N backups (retentionHours + 1 for current)
       const backupsToKeep = retentionHours;
       expect(backupsToKeep).toBe(168);
@@ -92,7 +92,7 @@ describe('Backup Script Tests', () => {
       const hostPort = uri.match(/mongodb:\/\/([^/]+)/)?.[1];
       const host = hostPort?.split(':')[0];
       const port = hostPort?.split(':')[1] || '27017';
-      
+
       expect(host).toBe('mongodb');
       expect(port).toBe('27017');
     });
@@ -100,7 +100,7 @@ describe('Backup Script Tests', () => {
     test('should handle mongodb+srv:// URI', () => {
       const uri = 'mongodb+srv://user:pass@cluster.mongodb.net/smokava';
       const isAtlas = uri.startsWith('mongodb+srv://');
-      
+
       expect(isAtlas).toBe(true);
     });
 
@@ -122,7 +122,7 @@ describe('Backup Script Tests', () => {
       const timestamp = new Date().toISOString()
         .replace('T', ' ')
         .replace(/\..+/, '');
-      
+
       // Format: YYYY-MM-DD HH:MM:SS
       expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
     });
@@ -142,7 +142,7 @@ describe('Backup Script Tests', () => {
       const totalBackups = 200;
       const backupsToKeep = retentionHours;
       const backupsToRemove = totalBackups - backupsToKeep;
-      
+
       expect(backupsToRemove).toBe(32);
     });
 
@@ -189,4 +189,3 @@ describe('Backup Script Tests', () => {
     });
   });
 });
-

@@ -26,9 +26,12 @@ describe('Role Assignment Tests', () => {
   let testAdmin;
 
   beforeAll(async () => {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/smokava_test';
+    // Use MONGODB_URI from environment (server MongoDB) or default to server service name
+    // Replace database name with test database
+    const baseUri = process.env.MONGODB_URI || 'mongodb://mongodb:27017/smokava';
+    const mongoUri = baseUri.replace(/\/[^\/]+$/, '/smokava_test');
     await mongoose.connect(mongoUri);
-    
+
     app = express();
     app.use(express.json());
     app.use('/api/admin', require('../routes/admin'));
@@ -66,7 +69,7 @@ describe('Role Assignment Tests', () => {
     test('should create a new role', async () => {
       const role = new Role({ name: 'operator' });
       await role.save();
-      
+
       expect(role._id).toBeDefined();
       expect(role.name).toBe('operator');
     });
@@ -74,7 +77,7 @@ describe('Role Assignment Tests', () => {
     test('should not create duplicate roles', async () => {
       const role1 = new Role({ name: 'operator' });
       await role1.save();
-      
+
       const role2 = new Role({ name: 'operator' });
       await expect(role2.save()).rejects.toThrow();
     });
@@ -105,7 +108,7 @@ describe('Role Assignment Tests', () => {
         });
 
       expect(response.status).toBe(200);
-      
+
       // Verify user's legacy role field is updated
       const updatedUser = await User.findById(testUser._id);
       expect(updatedUser.role).toBe('admin');
@@ -131,13 +134,13 @@ describe('Role Assignment Tests', () => {
         });
 
       expect(response.status).toBe(200);
-      
+
       const userRole = await UserRole.findOne({
         userId: testUser._id,
         'scope.restaurantId': restaurant._id
       });
       expect(userRole).toBeDefined();
-      
+
       // Verify user's assignedRestaurant is set
       const updatedUser = await User.findById(testUser._id);
       expect(updatedUser.assignedRestaurant.toString()).toBe(restaurant._id.toString());
@@ -186,7 +189,7 @@ describe('Role Assignment Tests', () => {
       // Assign role first
       const role = new Role({ name: 'operator' });
       await role.save();
-      
+
       const userRole = new UserRole({
         userId: testUser._id,
         roleId: role._id,
@@ -203,7 +206,7 @@ describe('Role Assignment Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Role revoked successfully');
-      
+
       const userRoles = await UserRole.find({ userId: testUser._id });
       expect(userRoles).toHaveLength(0);
     });
@@ -235,10 +238,10 @@ describe('Role Assignment Tests', () => {
       // Assign multiple roles
       const operatorRole = new Role({ name: 'operator' });
       await operatorRole.save();
-      
+
       const adminRole = new Role({ name: 'admin' });
       await adminRole.save();
-      
+
       await UserRole.create([
         {
           userId: testUser._id,
@@ -266,4 +269,3 @@ describe('Role Assignment Tests', () => {
     });
   });
 });
-
