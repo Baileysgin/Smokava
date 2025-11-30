@@ -163,6 +163,7 @@ if (!mongoUri) {
 // Configure mongoose connection options
 mongoose.set('bufferCommands', false); // Disable mongoose buffering
 
+// Connect to MongoDB and start server only after connection is established
 mongoose.connect(mongoUri, {
   serverSelectionTimeoutMS: 30000, // 30 seconds
   socketTimeoutMS: 45000, // 45 seconds
@@ -184,13 +185,14 @@ mongoose.connect(mongoUri, {
       console.warn('⚠️  Could not ensure admin user:', err.message);
       // Continue server startup - admin can be created manually if needed
     }
+
+    // Start server only after MongoDB is connected
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   })
   .catch(err => {
     console.error('MongoDB connection error:', err);
     process.exit(1);
   });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
