@@ -36,7 +36,7 @@ services:
       - KAVENEGAR_TEMPLATE=${KAVENEGAR_TEMPLATE:-otp-v2}
       - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
       - API_BASE_URL=${API_BASE_URL:-https://api.smokava.com}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://smokava.com,https://www.smokava.com,https://admin.smokava.com}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://smokava.com,https://www.smokava.com,https://admin.smokava.com,http://localhost:3000,http://localhost:5173}
       - FRONTEND_URL=${FRONTEND_URL:-https://smokava.com}
       - ADMIN_PANEL_URL=${ADMIN_PANEL_URL:-https://admin.smokava.com}
       - OTP_DEBUG_SECRET_KEY=${OTP_DEBUG_SECRET_KEY:-smokava-otp-debug-2024}
