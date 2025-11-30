@@ -34,7 +34,7 @@ AAAEAp3Oq9z1mrBQ3k45h/KrjauZSjwOUz94QtTj9Pd6OCh4zvQFTtnH7l+4EAWc3KiNwP
 #### Secret 2: SSH_HOST
 
 1. **Name:** `SSH_HOST`
-2. **Value:** 
+2. **Value:**
 ```
 root@91.107.241.245
 ```
@@ -76,4 +76,3 @@ Then check: https://github.com/Baileysgin/Smokava/actions
 ---
 
 **That's it! Once you add these 3 secrets, every push will automatically deploy.** 🚀
-

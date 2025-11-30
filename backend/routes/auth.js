@@ -31,16 +31,40 @@ router.post('/send-otp', async (req, res) => {
     if (!user) {
       // Create user without username to avoid duplicate key error
       // Username will be set later when user completes profile
-      user = new User({
-        phoneNumber,
-        username: undefined // Don't set empty string, use undefined
-      });
+      try {
+        user = new User({
+          phoneNumber,
+          // Don't set username - let it be null/undefined to avoid unique constraint issues
+        });
+        await user.save();
+        console.log('✅ New user created:', phoneNumber);
+      } catch (dbError) {
+        // If user was created between findOne and save, try to find again
+        if (dbError.code === 11000 || dbError.name === 'MongoServerError') {
+          console.log('⚠️ User creation conflict, finding existing user...');
+          user = await User.findOne({ phoneNumber });
+          if (!user) {
+            throw new Error('Failed to create or find user');
+          }
+        } else {
+          throw dbError;
+        }
+      }
     }
 
     // Save OTP code and expiration
     user.otpCode = otpCode;
     user.otpExpiresAt = otpExpiresAt;
-    await user.save();
+    try {
+      await user.save();
+    } catch (saveError) {
+      console.error('❌ Failed to save OTP to database:', {
+        phoneNumber,
+        error: saveError.message,
+        code: saveError.code
+      });
+      throw new Error(`Failed to save OTP: ${saveError.message}`);
+    }
 
     console.log('✅ OTP saved to database:', {
       phoneNumber,
@@ -112,8 +136,33 @@ router.post('/send-otp', async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Send OTP error:', error);
-    res.status(500).json({ message: 'Failed to send OTP', error: error.message });
+    console.error('❌ Send OTP error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      name: error.name
+    });
+    
+    // Provide more specific error messages
+    let statusCode = 500;
+    let errorMessage = 'Failed to send OTP';
+    
+    if (error.name === 'ValidationError') {
+      statusCode = 400;
+      errorMessage = 'Invalid phone number format';
+    } else if (error.message.includes('database') || error.message.includes('MongoDB')) {
+      statusCode = 503;
+      errorMessage = 'Database connection error. Please try again.';
+    } else if (error.message.includes('Kavenegar')) {
+      // SMS sending failed but OTP might still be saved
+      statusCode = 502;
+      errorMessage = 'SMS service temporarily unavailable. OTP may have been generated.';
+    }
+    
+    res.status(statusCode).json({ 
+      message: errorMessage, 
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message 
+    });
   }
 });
 
