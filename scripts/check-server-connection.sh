@@ -17,9 +17,16 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# SSH command with optional password
+SSH_PASS="${SSH_PASSWORD:-}"
+SSH_CMD="ssh"
+if [ -n "$SSH_PASS" ] && command -v sshpass > /dev/null 2>&1; then
+    SSH_CMD="sshpass -p '$SSH_PASS' ssh"
+fi
+
 # Check 1: SSH Connection
 echo -e "${YELLOW}1. Testing SSH connection...${NC}"
-if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$SERVER" "echo 'SSH connection successful'" 2>/dev/null; then
+if $SSH_CMD -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$SERVER" "echo 'SSH connection successful'" 2>/dev/null; then
     echo -e "${GREEN}   ✅ SSH connection works${NC}"
 else
     echo -e "${RED}   ❌ SSH connection failed${NC}"
@@ -29,7 +36,7 @@ fi
 
 # Check 2: Server directory exists
 echo -e "${YELLOW}2. Checking project directory...${NC}"
-if ssh "$SERVER" "test -d $REMOTE_DIR" 2>/dev/null; then
+if $SSH_CMD "$SERVER" "test -d $REMOTE_DIR" 2>/dev/null; then
     echo -e "${GREEN}   ✅ Project directory exists: $REMOTE_DIR${NC}"
 else
     echo -e "${RED}   ❌ Project directory not found${NC}"
@@ -39,9 +46,9 @@ fi
 
 # Check 3: Git repository
 echo -e "${YELLOW}3. Checking git repository...${NC}"
-if ssh "$SERVER" "cd $REMOTE_DIR && git status > /dev/null 2>&1"; then
+if $SSH_CMD "$SERVER" "cd $REMOTE_DIR && git status > /dev/null 2>&1"; then
     echo -e "${GREEN}   ✅ Git repository found${NC}"
-    REMOTE_BRANCH=$(ssh "$SERVER" "cd $REMOTE_DIR && git rev-parse --abbrev-ref HEAD 2>/dev/null")
+    REMOTE_BRANCH=$($SSH_CMD "$SERVER" "cd $REMOTE_DIR && git rev-parse --abbrev-ref HEAD 2>/dev/null")
     echo "   Current branch: $REMOTE_BRANCH"
 else
     echo -e "${RED}   ❌ Not a git repository${NC}"
@@ -50,15 +57,15 @@ fi
 
 # Check 4: Docker and docker-compose
 echo -e "${YELLOW}4. Checking Docker...${NC}"
-if ssh "$SERVER" "command -v docker > /dev/null 2>&1"; then
-    DOCKER_VERSION=$(ssh "$SERVER" "docker --version" | head -1)
+if $SSH_CMD "$SERVER" "command -v docker > /dev/null 2>&1"; then
+    DOCKER_VERSION=$($SSH_CMD "$SERVER" "docker --version" | head -1)
     echo -e "${GREEN}   ✅ Docker installed: $DOCKER_VERSION${NC}"
 else
     echo -e "${RED}   ❌ Docker not installed${NC}"
     exit 1
 fi
 
-if ssh "$SERVER" "command -v docker-compose > /dev/null 2>&1 || docker compose version > /dev/null 2>&1"; then
+if $SSH_CMD "$SERVER" "command -v docker-compose > /dev/null 2>&1 || docker compose version > /dev/null 2>&1"; then
     echo -e "${GREEN}   ✅ Docker Compose available${NC}"
 else
     echo -e "${RED}   ❌ Docker Compose not found${NC}"
@@ -68,7 +75,7 @@ fi
 # Check 5: Compare local vs remote commits
 echo -e "${YELLOW}5. Checking git sync status...${NC}"
 LOCAL_COMMIT=$(git rev-parse HEAD)
-REMOTE_COMMIT=$(ssh "$SERVER" "cd $REMOTE_DIR && git rev-parse origin/main 2>/dev/null" || echo "")
+REMOTE_COMMIT=$($SSH_CMD "$SERVER" "cd $REMOTE_DIR && git rev-parse origin/main 2>/dev/null" || echo "")
 
 if [ -z "$REMOTE_COMMIT" ]; then
     echo -e "${YELLOW}   ⚠️  Could not get remote commit${NC}"
@@ -84,9 +91,9 @@ fi
 
 # Check 6: Services status
 echo -e "${YELLOW}6. Checking services status...${NC}"
-if ssh "$SERVER" "cd $REMOTE_DIR && docker-compose ps 2>/dev/null | grep -q backend"; then
+if $SSH_CMD "$SERVER" "cd $REMOTE_DIR && docker-compose ps 2>/dev/null | grep -q backend"; then
     echo -e "${GREEN}   ✅ Services are running${NC}"
-    ssh "$SERVER" "cd $REMOTE_DIR && docker-compose ps --format 'table {{.Name}}\t{{.Status}}' 2>/dev/null | head -5"
+    $SSH_CMD "$SERVER" "cd $REMOTE_DIR && docker-compose ps --format 'table {{.Name}}\t{{.Status}}' 2>/dev/null | head -5"
 else
     echo -e "${YELLOW}   ⚠️  Services may not be running${NC}"
 fi
