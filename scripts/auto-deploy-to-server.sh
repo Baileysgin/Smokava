@@ -70,7 +70,7 @@ SSH_CMD "$SERVER" "cd $REMOTE_DIR && \
 
 # Step 5: Create backup
 echo -e "${YELLOW}📦 Step 4: Creating backup...${NC}"
-ssh "$SERVER" "cd $REMOTE_DIR && bash scripts/db-backup.sh" || {
+SSH_CMD "$SERVER" "cd $REMOTE_DIR && bash scripts/db-backup.sh" || {
     echo -e "${YELLOW}⚠️  Backup failed, continuing...${NC}"
 }
 
