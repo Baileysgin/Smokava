@@ -103,6 +103,25 @@ const restaurants = [
     distance: '۳.۲ کیلومتر',
     popular: false,
     accepted: true
+  },
+  {
+    name: 'Hermanos Restaurant',
+    nameFa: 'رستوران هرمانوس',
+    address: 'Tehran, Iran',
+    addressFa: 'تهران، ایران',
+    location: {
+      type: 'Point',
+      coordinates: [51.4200, 35.8000]
+    },
+    phone: '021-22666666',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
+    rating: 4.5,
+    reviews: 150,
+    flavors: 10,
+    distance: '۴.۰ کیلومتر',
+    popular: true,
+    accepted: true
   }
 ];
 
@@ -144,23 +163,41 @@ async function seed() {
       }
     }
 
-    // Insert packages (only if they don't already exist)
-    const packageExists = await Package.findOne({ name: packages[0].name });
-    if (!packageExists) {
-      const insertedPackages = await Package.insertMany(packages);
-      console.log(`✅ Inserted ${insertedPackages.length} packages`);
-    } else {
-      console.log('ℹ️  Packages already exist, skipping insertion');
+    // Insert packages - check each one individually to avoid duplicates
+    let packageInsertedCount = 0;
+    let packageSkippedCount = 0;
+    
+    for (const pkg of packages) {
+      const existing = await Package.findOne({ name: pkg.name });
+      if (!existing) {
+        await Package.create(pkg);
+        packageInsertedCount++;
+        console.log(`✅ Inserted package: ${pkg.name}`);
+      } else {
+        packageSkippedCount++;
+        console.log(`ℹ️  Package already exists: ${pkg.name}`);
+      }
     }
+    
+    console.log(`✅ Package seeding complete: ${packageInsertedCount} inserted, ${packageSkippedCount} skipped`);
 
-    // Insert restaurants (only if they don't already exist)
-    const restaurantExists = await Restaurant.findOne({ name: restaurants[0].name });
-    if (!restaurantExists) {
-      const insertedRestaurants = await Restaurant.insertMany(restaurants);
-      console.log(`✅ Inserted ${insertedRestaurants.length} restaurants`);
-    } else {
-      console.log('ℹ️  Restaurants already exist, skipping insertion');
+    // Insert restaurants - check each one individually to avoid duplicates
+    let insertedCount = 0;
+    let skippedCount = 0;
+    
+    for (const restaurant of restaurants) {
+      const existing = await Restaurant.findOne({ name: restaurant.name });
+      if (!existing) {
+        await Restaurant.create(restaurant);
+        insertedCount++;
+        console.log(`✅ Inserted restaurant: ${restaurant.name}`);
+      } else {
+        skippedCount++;
+        console.log(`ℹ️  Restaurant already exists: ${restaurant.name}`);
+      }
     }
+    
+    console.log(`✅ Restaurant seeding complete: ${insertedCount} inserted, ${skippedCount} skipped`);
 
     console.log('✅ Seed operation completed successfully');
     process.exit(0);
