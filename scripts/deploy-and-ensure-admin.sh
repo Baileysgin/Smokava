@@ -88,4 +88,3 @@ echo "  Username: admin"
 echo "  Password: admin123"
 echo ""
 echo -e "${YELLOW}⚠️  Change password after first login!${NC}"
-

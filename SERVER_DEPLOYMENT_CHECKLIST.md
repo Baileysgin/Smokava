@@ -141,4 +141,3 @@ After deployment, verify:
 ```bash
 ssh root@91.107.241.245 "cd /opt/smokava && git pull origin main && bash scripts/deploy-and-ensure-admin.sh"
 ```
-
