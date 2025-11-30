@@ -6,10 +6,16 @@
 # This script seeds the database with initial data
 # Run this after pulling from git to ensure database has required data
 # Usage: ./scripts/seed-database.sh
+# 
+# This script:
+# 1. Seeds restaurants and packages (basic data)
+# 2. Seeds users and posts (feed content)
+# 3. Preserves existing data (no duplicates)
 
 set -e
 
 echo "🌱 Starting database seeding..."
+echo "   This will ensure all required data exists in the database"
 
 # Get the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -54,12 +60,17 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Set MongoDB URI and run seed script
+# Set MongoDB URI and run seed scripts
 export MONGODB_URI="$MONGODB_URI"
 export NODE_ENV="${NODE_ENV:-production}"
 
 echo "🔗 Connecting to MongoDB: $MONGODB_URI"
+echo ""
+echo "📦 Step 1: Seeding restaurants and packages..."
 node scripts/seed.js
 
-echo "✅ Database seeding completed!"
+echo ""
+echo "👥 Step 2: Seeding users and posts..."
+node scripts/seedFakeData.js
 
+echo "✅ Database seeding completed!"
