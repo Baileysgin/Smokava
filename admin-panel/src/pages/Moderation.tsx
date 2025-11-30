@@ -229,7 +229,7 @@ export default function Moderation() {
                             }}
                             className="px-2 py-1 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <DeleteOutlined />
                           </button>
                         </div>
                       </div>

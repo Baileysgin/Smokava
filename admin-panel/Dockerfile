@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm cache clean --force && npm install
+RUN rm -rf /root/.npm && npm install
 
 # Build the application
 FROM base AS builder
