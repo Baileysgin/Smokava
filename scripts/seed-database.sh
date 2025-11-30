@@ -36,7 +36,16 @@ fi
 if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
     if docker compose ps 2>/dev/null | grep -q "smokava-backend.*Up"; then
         echo "🐳 Using Docker Compose backend container"
+        echo ""
+        echo "📦 Step 1: Seeding restaurants and packages..."
         docker compose exec -T backend node scripts/seed.js
+        
+        echo ""
+        echo "👥 Step 2: Seeding users and posts..."
+        docker compose exec -T backend node scripts/seedFakeData.js
+        
+        echo ""
+        echo "✅ Database seeding completed!"
         exit $?
     fi
 fi
@@ -73,4 +82,5 @@ echo ""
 echo "👥 Step 2: Seeding users and posts..."
 node scripts/seedFakeData.js
 
+echo ""
 echo "✅ Database seeding completed!"
