@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { Trash2, Eye, EyeOff, MessageSquare, Calendar, User, MapPin } from 'lucide-react';
+import { DeleteOutlined, EyeOutlined, EyeInvisibleOutlined, MessageOutlined, CalendarOutlined, UserOutlined, EnvironmentOutlined } from '@ant-design/icons';
 
 interface Post {
   _id: string;
@@ -196,15 +196,15 @@ export default function Moderation() {
                         <p className="text-sm text-gray-900 line-clamp-2">{post.caption}</p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
+                            <UserOutlined />
                             {post.user.firstName} {post.user.lastName}
                           </span>
                           <span className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
+                            <EnvironmentOutlined />
                             {post.restaurant.nameFa}
                           </span>
                           <span className="flex items-center gap-1">
-                            <MessageSquare className="w-4 h-4" />
+                            <MessageOutlined />
                             {post.comments?.filter(c => !c.deletedAt).length || 0}
                           </span>
                         </div>
@@ -220,7 +220,7 @@ export default function Moderation() {
                                 : 'bg-gray-100 text-gray-700'
                             }`}
                           >
-                            {post.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            {post.published ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                           </button>
                           <button
                             onClick={(e) => {
@@ -278,15 +278,15 @@ export default function Moderation() {
                   <p className="text-gray-900 mb-4">{selectedPost.caption}</p>
                   <div className="space-y-2 text-sm text-gray-600 mb-4">
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
+                      <UserOutlined />
                       <span>{selectedPost.user.firstName} {selectedPost.user.lastName}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
+                      <EnvironmentOutlined />
                       <span>{selectedPost.restaurant.nameFa}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
+                      <CalendarOutlined />
                       <span>{formatDate(selectedPost.createdAt)}</span>
                     </div>
                   </div>
@@ -300,21 +300,22 @@ export default function Moderation() {
                           <div key={comment._id} className="p-3 bg-gray-50 rounded">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-sm">
-                                    {comment.user.firstName} {comment.user.lastName}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {formatDate(comment.commentedAt)}
-                                  </span>
-                                </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <UserOutlined className="text-xs" />
+                      <span className="font-medium text-sm">
+                        {comment.user.firstName} {comment.user.lastName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(comment.commentedAt)}
+                      </span>
+                    </div>
                                 <p className="text-sm text-gray-700">{comment.text}</p>
                               </div>
                               <button
                                 onClick={() => handleDeleteComment(selectedPost._id, comment._id)}
                                 className="ml-2 p-1 text-red-600 hover:bg-red-50 rounded"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <DeleteOutlined />
                               </button>
                             </div>
                           </div>
