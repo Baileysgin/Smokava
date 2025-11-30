@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -43,15 +43,15 @@ jobs:
             echo "⚠️ API_URL secret not set, skipping health check"
             exit 0
           fi
-          
+
           # Ensure API_URL ends with /api
           if [[ ! "$API_URL" == */api ]]; then
             API_URL="${API_URL%/}/api"
           fi
-          
+
           HEALTH_URL="${API_URL}/health"
           echo "Checking: ${HEALTH_URL}"
-          
+
           for i in {1..5}; do
             if curl -f -s "${HEALTH_URL}" > /dev/null 2>&1; then
               echo "✅ Health check passed!"
@@ -60,7 +60,7 @@ jobs:
             echo "⏳ Attempt $i/5 failed, retrying in 5 seconds..."
             sleep 5
           done
-          
+
           echo "⚠️ Health check failed after 5 attempts, but deployment may still be successful"
           exit 0
 
