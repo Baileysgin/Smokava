@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
       deployments: write
@@ -60,7 +60,7 @@ jobs:
         run: |
           echo "🏥 Running health check..."
           API_URL="${{ secrets.API_URL || 'https://api.smokava.com' }}"
-          
+
           # Ensure API_URL ends with /api
           if [[ ! "$API_URL" == */api ]]; then
             API_URL="${API_URL%/}/api"

@@ -196,4 +196,3 @@ git push origin main
 - ✅ **All validations passed**
 
 **Next Step**: Run `./scripts/deploy-via-git.sh` to deploy!
-

@@ -124,14 +124,14 @@ echo -e "${BLUE}STEP 4: Validating Docker configuration...${NC}"
 
 if command -v docker-compose > /dev/null 2>&1 || command -v docker > /dev/null 2>&1; then
   check_pass "Docker is available"
-  
+
   # Check docker-compose.yml syntax
   if docker-compose config > /dev/null 2>&1 || docker compose config > /dev/null 2>&1; then
     check_pass "docker-compose.yml syntax is valid"
   else
     check_fail "docker-compose.yml has syntax errors"
   fi
-  
+
   # Check for localhost port mappings in production
   if grep -q "localhost:.*:" docker-compose.yml 2>/dev/null; then
     check_warn "docker-compose.yml may contain localhost port mappings (check if needed)"
@@ -148,14 +148,14 @@ echo -e "${BLUE}STEP 5: Validating GitHub connection...${NC}"
 
 if git remote -v | grep -q "github.com" 2>/dev/null; then
   check_pass "GitHub remote is configured"
-  
+
   # Check if we can reach GitHub
   if git ls-remote --heads origin main > /dev/null 2>&1; then
     check_pass "GitHub repository is accessible"
   else
     check_fail "Cannot access GitHub repository (check SSH keys or token)"
   fi
-  
+
   # Check current branch
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
   if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
@@ -173,20 +173,20 @@ echo -e "${BLUE}STEP 6: Checking GitHub Actions workflow...${NC}"
 
 if [ -f ".github/workflows/deploy.yml" ]; then
   check_pass "GitHub Actions workflow file exists"
-  
+
   # Check for required secrets
   if grep -q "secrets.SSH_PRIVATE_KEY" .github/workflows/deploy.yml 2>/dev/null; then
     check_pass "Workflow uses SSH_PRIVATE_KEY secret"
   else
     check_warn "Workflow may not be using SSH_PRIVATE_KEY"
   fi
-  
+
   if grep -q "secrets.SSH_HOST" .github/workflows/deploy.yml 2>/dev/null; then
     check_pass "Workflow uses SSH_HOST secret"
   else
     check_warn "Workflow may not be using SSH_HOST"
   fi
-  
+
   # Check permissions
   if grep -q "permissions:" .github/workflows/deploy.yml 2>/dev/null; then
     check_pass "Workflow has permissions configured"
@@ -238,4 +238,3 @@ else
   echo -e "${RED}❌ FIX REQUIRED before deployment!${NC}"
   exit 1
 fi
-
