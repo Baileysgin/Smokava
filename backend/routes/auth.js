@@ -16,9 +16,17 @@ router.post('/send-otp', async (req, res) => {
     }
 
     // Validate phone number format (should start with 09 for Iran)
-    if (!/^09\d{9}$/.test(phoneNumber)) {
-      return res.status(400).json({ message: 'Invalid phone number format' });
+    // Also handle phone numbers with +98 prefix or 0098 prefix
+    const normalizedPhone = phoneNumber.replace(/^\+98|^0098/, '0');
+    if (!/^09\d{9}$/.test(normalizedPhone)) {
+      return res.status(400).json({ 
+        message: 'Invalid phone number format. Please use format: 09XXXXXXXXX',
+        provided: phoneNumber
+      });
     }
+    
+    // Use normalized phone number
+    const finalPhoneNumber = normalizedPhone;
 
     // Generate 6-digit OTP for login
     const otpCode = generateLoginOTP();
@@ -27,13 +35,13 @@ router.post('/send-otp', async (req, res) => {
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     // Find or create user
-    let user = await User.findOne({ phoneNumber });
+    let user = await User.findOne({ phoneNumber: finalPhoneNumber });
     if (!user) {
       // Create user without username to avoid duplicate key error
       // Username will be set later when user completes profile
       try {
         user = new User({
-          phoneNumber,
+          phoneNumber: finalPhoneNumber,
           // Don't set username - let it be null/undefined to avoid unique constraint issues
         });
         await user.save();
@@ -42,7 +50,7 @@ router.post('/send-otp', async (req, res) => {
         // If user was created between findOne and save, try to find again
         if (dbError.code === 11000 || dbError.name === 'MongoServerError') {
           console.log('⚠️ User creation conflict, finding existing user...');
-          user = await User.findOne({ phoneNumber });
+          user = await User.findOne({ phoneNumber: finalPhoneNumber });
           if (!user) {
             throw new Error('Failed to create or find user');
           }
@@ -67,7 +75,7 @@ router.post('/send-otp', async (req, res) => {
     }
 
     console.log('✅ OTP saved to database:', {
-      phoneNumber,
+      phoneNumber: finalPhoneNumber,
       otpCode,
       expiresAt: otpExpiresAt
     });
@@ -81,15 +89,15 @@ router.post('/send-otp', async (req, res) => {
     if (hasKavenegarCredentials) {
       // If credentials are available, always try to send SMS
       try {
-        await sendOTP(phoneNumber, otpCode);
-        console.log('✅ SMS sent successfully to:', phoneNumber);
+        await sendOTP(finalPhoneNumber, otpCode);
+        console.log('✅ SMS sent successfully to:', finalPhoneNumber);
       } catch (err) {
         smsError = {
           message: err.message,
           code: err.code || 'SMS_SEND_FAILED'
         };
         console.error('❌ Failed to send SMS:', {
-          phoneNumber,
+          phoneNumber: finalPhoneNumber,
           error: err.message,
           stack: err.stack
         });
@@ -99,7 +107,7 @@ router.post('/send-otp', async (req, res) => {
         if (!isProduction) {
           console.log('\n📱 ============================================');
           console.log('📱 OTP CODE (SMS Failed - Development Mode)');
-          console.log('📱 Phone Number:', phoneNumber);
+          console.log('📱 Phone Number:', finalPhoneNumber);
           console.log('📱 OTP Code:', otpCode);
           console.log('📱 ============================================\n');
         }
