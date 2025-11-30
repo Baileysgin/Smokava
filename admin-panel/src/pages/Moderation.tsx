@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { DeleteOutlined, EyeOutlined, EyeInvisibleOutlined, MessageOutlined, CalendarOutlined, UserOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, EyeInvisibleOutlined, MessageOutlined, CalendarOutlined, UserOutlined, EnvironmentOutlined, EditOutlined } from '@ant-design/icons';
 
 interface Post {
   _id: string;
