@@ -1,5 +1,7 @@
 # Backup and Restore Guide for Smokava
 
+**CRITICAL**: This guide ensures database backups and safe restore procedures.
+
 This guide covers database backup and restore procedures for MongoDB.
 
 ## Backup Configuration

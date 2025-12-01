@@ -92,7 +92,12 @@ networks:
     driver: bridge
 
 volumes:
+  # CRITICAL: Named volume for database persistence
+  # NEVER use anonymous volumes or docker compose down -v
+  # This volume persists data across container restarts
   mongodb_data:
+    name: smokava_mongodb_data
     driver: local
   admin_data:
+    name: smokava_admin_data
     driver: local

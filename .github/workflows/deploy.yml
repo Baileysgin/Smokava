@@ -38,8 +38,20 @@ jobs:
         run: |
           echo "📦 Creating database backup..."
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "cd /opt/smokava && bash scripts/db-backup.sh" || {
-            echo "⚠️ Backup failed, but continuing with deployment..."
+            echo "❌ CRITICAL: Backup failed!"
+            echo "⚠️ Deployment will continue, but backup is required for safety"
+            echo "⚠️ Please check backup script and database connection"
           }
+          
+      - name: Verify backup was created
+        run: |
+          echo "🔍 Verifying backup was created..."
+          BACKUP_COUNT=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "ls -1 /var/backups/smokava/smokava_backup_*.gz 2>/dev/null | wc -l" || echo "0")
+          if [ "$BACKUP_COUNT" -eq "0" ]; then
+            echo "⚠️ WARNING: No backups found! This may indicate a problem."
+          else
+            echo "✅ Found $BACKUP_COUNT backup(s)"
+          fi
 
       - name: Pull latest code and deploy
         run: |

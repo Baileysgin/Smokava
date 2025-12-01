@@ -92,25 +92,56 @@ else
 fi
 
 # Check if backup was successful
-if [ $? -eq 0 ] && [ -f "$BACKUP_FILE" ]; then
+BACKUP_EXIT_CODE=$?
+if [ $BACKUP_EXIT_CODE -eq 0 ] && [ -f "$BACKUP_FILE" ]; then
     BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+    BACKUP_SIZE_BYTES=$(stat -f%z "$BACKUP_FILE" 2>/dev/null || stat -c%s "$BACKUP_FILE" 2>/dev/null || echo "0")
+    
+    # Verify backup file is not empty
+    if [ "$BACKUP_SIZE_BYTES" -lt 1000 ]; then
+        log "ERROR: Backup file is too small ($BACKUP_SIZE_BYTES bytes) - backup may be corrupted!"
+        rm -f "$BACKUP_FILE"
+        exit 1
+    fi
+    
     log "Backup completed successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
 
     # Update last backup timestamp file
     echo "$TIMESTAMP" > "$BACKUP_DIR/last_backup.txt"
+    echo "$BACKUP_FILE" > "$BACKUP_DIR/last_backup_path.txt"
 
     # Rotate old backups (keep last N backups)
     log "Rotating old backups (keeping last $RETENTION_HOURS backups)..."
     cd "$BACKUP_DIR"
-    ls -t smokava_backup_*.gz 2>/dev/null | tail -n +$((RETENTION_HOURS + 1)) | xargs -r rm -f
+    OLD_BACKUPS=$(ls -t smokava_backup_*.gz 2>/dev/null | tail -n +$((RETENTION_HOURS + 1)) | wc -l)
+    if [ "$OLD_BACKUPS" -gt 0 ]; then
+        ls -t smokava_backup_*.gz 2>/dev/null | tail -n +$((RETENTION_HOURS + 1)) | xargs -r rm -f
+        log "Removed $OLD_BACKUPS old backup(s)"
+    else
+        log "No old backups to remove"
+    fi
     log "Backup rotation completed"
 
     # Count remaining backups
     BACKUP_COUNT=$(ls -1 smokava_backup_*.gz 2>/dev/null | wc -l)
     log "Total backups retained: $BACKUP_COUNT"
 
+    # Verify backup integrity (quick check)
+    log "Verifying backup integrity..."
+    if command -v gzip >/dev/null 2>&1; then
+        if gzip -t "$BACKUP_FILE" 2>/dev/null; then
+            log "Backup integrity verified"
+        else
+            log "WARNING: Backup file may be corrupted (gzip test failed)"
+        fi
+    fi
+
     exit 0
 else
-    log "ERROR: Backup failed!"
+    log "ERROR: Backup failed! Exit code: $BACKUP_EXIT_CODE"
+    if [ -f "$BACKUP_FILE" ]; then
+        rm -f "$BACKUP_FILE"
+        log "Removed incomplete backup file"
+    fi
     exit 1
 fi

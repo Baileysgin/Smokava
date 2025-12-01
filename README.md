@@ -25,6 +25,20 @@ A full-stack shisha package sharing app with social features.
 - **UI**: Farsi (Persian) with RTL layout
 - **Deployment**: Docker + Docker Compose
 
+## ⚠️ CRITICAL: Database Safety
+
+**NEVER run these commands in production:**
+- `docker compose down -v` - **DELETES ALL DATABASE DATA**
+- `docker-compose down -v` - **DELETES ALL DATABASE DATA**
+- `docker volume rm` on database volumes - **DELETES ALL DATA**
+
+**ALWAYS:**
+- Use `scripts/deploy-safe.sh` for deployments
+- Backup before any deployment: `scripts/db-backup.sh`
+- Use `docker compose up -d --no-deps` (preserves volumes)
+
+See `DEPLOY_SAFE.md` for complete safety guidelines.
+
 ## Server Deployment
 
 ### Prerequisites

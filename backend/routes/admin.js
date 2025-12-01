@@ -1442,4 +1442,84 @@ router.get('/health', auth, requireAdmin, async (req, res) => {
   }
 });
 
+// Get backup information endpoint
+router.get('/backups', auth, requireAdmin, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+
+    const backupPath = process.env.BACKUP_PATH || '/var/backups/smokava';
+    const lastBackupFile = path.join(backupPath, 'last_backup.txt');
+
+    let lastBackup = null;
+    let lastBackupTime = null;
+    let backupCount = 0;
+    let totalBackupSize = 0;
+    const backups = [];
+
+    try {
+      // Read last backup timestamp
+      if (fs.existsSync(lastBackupFile)) {
+        const timestamp = fs.readFileSync(lastBackupFile, 'utf8').trim();
+        lastBackup = timestamp;
+        // Parse timestamp to ISO date
+        if (timestamp && timestamp.length >= 15) {
+          const year = timestamp.substring(0, 4);
+          const month = timestamp.substring(4, 6);
+          const day = timestamp.substring(6, 8);
+          const hour = timestamp.substring(9, 11);
+          const minute = timestamp.substring(11, 13);
+          const second = timestamp.substring(13, 15);
+          lastBackupTime = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`).toISOString();
+        }
+      }
+
+      // List all backup files
+      if (fs.existsSync(backupPath)) {
+        const files = fs.readdirSync(backupPath).filter(f => f.startsWith('smokava_backup_') && f.endsWith('.gz'));
+        backupCount = files.length;
+
+        // Get details of recent backups (last 10)
+        files
+          .sort()
+          .reverse()
+          .slice(0, 10)
+          .forEach(file => {
+            const filePath = path.join(backupPath, file);
+            try {
+              const stats = fs.statSync(filePath);
+              backups.push({
+                filename: file,
+                size: stats.size,
+                sizeHuman: (stats.size / 1024 / 1024).toFixed(2) + ' MB',
+                createdAt: stats.birthtime || stats.mtime,
+                modifiedAt: stats.mtime
+              });
+              totalBackupSize += stats.size;
+            } catch (error) {
+              // Skip files we can't read
+            }
+          });
+      }
+    } catch (error) {
+      console.error('Error reading backup information:', error);
+    }
+
+    res.json({
+      backupPath,
+      lastBackup,
+      lastBackupTime,
+      backupCount,
+      totalBackupSize: totalBackupSize,
+      totalBackupSizeHuman: (totalBackupSize / 1024 / 1024).toFixed(2) + ' MB',
+      recentBackups: backups,
+      retentionHours: parseInt(process.env.RETENTION_HOURS || '168'),
+      retentionDays: parseInt(process.env.RETENTION_DAYS || '7')
+    });
+  } catch (error) {
+    console.error('Get backups error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

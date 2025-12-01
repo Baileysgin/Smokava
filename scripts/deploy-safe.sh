@@ -84,9 +84,27 @@ if [ -f "$PROJECT_DIR/backend/scripts/migrate.js" ]; then
     docker compose exec -T backend node scripts/migrate.js || warn "Migration script failed"
 fi
 
+# CRITICAL SAFETY CHECK: Prevent accidental volume deletion
+log "Step 7: Safety check - preventing volume deletion..."
+if echo "$*" | grep -q "down.*-v\|-v.*down"; then
+    error "CRITICAL: docker compose down -v detected! This would DELETE the database. Deployment aborted for safety."
+fi
+
+# Verify volumes exist before deployment
+log "Verifying database volumes exist..."
+if ! docker volume ls | grep -q "smokava_mongodb_data\|mongodb_data"; then
+    warn "Database volume not found! This may indicate a problem."
+    warn "If this is intentional (fresh install), continue. Otherwise, check volume configuration."
+    read -p "Continue deployment? (yes/no): " -t 10 CONTINUE || CONTINUE="no"
+    if [ "$CONTINUE" != "yes" ]; then
+        error "Deployment aborted by user"
+    fi
+fi
+
 # Step 7: Start/restart services (without removing volumes)
+# CRITICAL: Never use 'docker compose down' or 'down -v' - it removes volumes!
 log "Step 7: Starting services (preserving volumes)..."
-$DOCKER_COMPOSE_CMD up -d --no-deps backend frontend admin-panel || error "Failed to start services"
+$DOCKER_COMPOSE_CMD up -d --no-deps --build backend frontend admin-panel || error "Failed to start services"
 
 # Step 8: Wait for services to be healthy
 log "Step 8: Waiting for services to be healthy..."
