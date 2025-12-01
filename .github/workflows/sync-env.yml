@@ -14,16 +14,84 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate Required Secrets
+        run: |
+          echo "🔍 Validating required GitHub secrets..."
+          echo ""
+          
+          MISSING_SECRETS=()
+          
+          # Check SSH_PRIVATE_KEY (required)
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            MISSING_SECRETS+=("SSH_PRIVATE_KEY")
+            echo "❌ SSH_PRIVATE_KEY is missing"
+          else
+            echo "✅ SSH_PRIVATE_KEY is set"
+          fi
+          
+          # Check SERVER_IP (required)
+          if [ -z "${{ secrets.SERVER_IP }}" ]; then
+            MISSING_SECRETS+=("SERVER_IP")
+            echo "❌ SERVER_IP is missing"
+          else
+            echo "✅ SERVER_IP is set: ${{ secrets.SERVER_IP }}"
+          fi
+          
+          echo ""
+          
+          # If any secrets are missing, fail with clear instructions
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ ERROR: Missing required GitHub secrets!"
+            echo ""
+            echo "Please add the following secrets in GitHub:"
+            echo "  1. Go to: https://github.com/Baileysgin/Smokava/settings/secrets/actions"
+            echo "  2. Click 'New repository secret'"
+            echo "  3. Add each missing secret:"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              case "$secret" in
+                SSH_PRIVATE_KEY)
+                  echo "     - Name: SSH_PRIVATE_KEY"
+                  echo "       Value: Your SSH private key (full key including -----BEGIN and -----END lines)"
+                  ;;
+                SERVER_IP)
+                  echo "     - Name: SERVER_IP"
+                  echo "       Value: 91.107.241.245"
+                  ;;
+              esac
+            done
+            echo ""
+            echo "After adding secrets, re-run this workflow."
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are present!"
+          echo ""
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Sync environment files
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
         with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Sync environment files
+        run: |
+          SSH_USER="${{ secrets.SSH_USER || 'root' }}"
+          SSH_PORT="${{ secrets.SSH_PORT || '22' }}"
+          SSH_TARGET="${SSH_USER}@${{ secrets.SERVER_IP }}"
+          
+          ssh -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=60 \
+              -o ServerAliveInterval=20 \
+              -o ServerAliveCountMax=10 \
+              -o TCPKeepAlive=yes \
+              -o BatchMode=yes \
+              -p ${SSH_PORT} \
+              ${SSH_TARGET} \
+              "bash -c '
           script: |
             cd /opt/smokava
 
@@ -60,7 +128,8 @@ jobs:
             EOF
             fi
 
-            echo "✅ Environment files synced!"
+            echo \"✅ Environment files synced!\"
+              '"
 
 
 

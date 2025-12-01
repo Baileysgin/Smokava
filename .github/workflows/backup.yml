@@ -8,18 +8,86 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate Required Secrets
+        run: |
+          echo "🔍 Validating required GitHub secrets..."
+          echo ""
+
+          MISSING_SECRETS=()
+
+          # Check SSH_PRIVATE_KEY (required)
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            MISSING_SECRETS+=("SSH_PRIVATE_KEY")
+            echo "❌ SSH_PRIVATE_KEY is missing"
+          else
+            echo "✅ SSH_PRIVATE_KEY is set"
+          fi
+
+          # Check SERVER_IP or SSH_HOST (required)
+          if [ -z "${{ secrets.SERVER_IP }}" ] && [ -z "${{ secrets.SSH_HOST }}" ]; then
+            MISSING_SECRETS+=("SERVER_IP")
+            echo "❌ SERVER_IP is missing (or SSH_HOST as alternative)"
+          else
+            if [ -n "${{ secrets.SERVER_IP }}" ]; then
+              echo "✅ SERVER_IP is set: ${{ secrets.SERVER_IP }}"
+            else
+              echo "✅ SSH_HOST is set (using as fallback)"
+            fi
+          fi
+
+          echo ""
+
+          # If any secrets are missing, fail with clear instructions
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ ERROR: Missing required GitHub secrets!"
+            echo ""
+            echo "Please add the following secrets in GitHub:"
+            echo "  1. Go to: https://github.com/Baileysgin/Smokava/settings/secrets/actions"
+            echo "  2. Click 'New repository secret'"
+            echo "  3. Add each missing secret:"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              case "$secret" in
+                SSH_PRIVATE_KEY)
+                  echo "     - Name: SSH_PRIVATE_KEY"
+                  echo "       Value: Your SSH private key (full key including -----BEGIN and -----END lines)"
+                  ;;
+                SERVER_IP)
+                  echo "     - Name: SERVER_IP"
+                  echo "       Value: 91.107.241.245"
+                  echo "       (Or use SSH_HOST: root@91.107.241.245)"
+                  ;;
+              esac
+            done
+            echo ""
+            echo "After adding secrets, re-run this workflow."
+            exit 1
+          fi
+
+          echo "✅ All required secrets are present!"
+          echo ""
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Configure SSH target
+        run: |
+          if [ -n "${{ secrets.SERVER_IP }}" ]; then
+            SSH_TARGET="root@${{ secrets.SERVER_IP }}"
+          else
+            SSH_TARGET="${{ secrets.SSH_HOST }}"
+          fi
+          echo "SSH_TARGET=${SSH_TARGET}" >> $GITHUB_ENV
+
       - name: Create backup
         run: |
-          ssh ${{ secrets.SSH_HOST }} "cd /opt/smokava && bash scripts/db-backup.sh"
+          ssh ${{ env.SSH_TARGET }} "cd /opt/smokava && bash scripts/db-backup.sh"
 
       - name: Download backup
         run: |
-          scp ${{ secrets.SSH_HOST }}:/var/backups/smokava/smokava_backup_*.gz ./backup.gz || echo "No backup file found"
+          scp ${{ env.SSH_TARGET }}:/var/backups/smokava/smokava_backup_*.gz ./backup.gz || echo "No backup file found"
           ls -lh backup.gz || echo "Backup file not found"
 
       - name: Upload backup artifact

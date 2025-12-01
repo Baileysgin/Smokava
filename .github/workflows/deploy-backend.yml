@@ -19,6 +19,60 @@ jobs:
       actions: write
 
     steps:
+      - name: Validate Required Secrets
+        run: |
+          echo "🔍 Validating required GitHub secrets..."
+          echo ""
+
+          MISSING_SECRETS=()
+
+          # Check SSH_PRIVATE_KEY (required)
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            MISSING_SECRETS+=("SSH_PRIVATE_KEY")
+            echo "❌ SSH_PRIVATE_KEY is missing"
+          else
+            echo "✅ SSH_PRIVATE_KEY is set"
+          fi
+
+          # Check SERVER_IP (required)
+          if [ -z "${{ secrets.SERVER_IP }}" ]; then
+            MISSING_SECRETS+=("SERVER_IP")
+            echo "❌ SERVER_IP is missing"
+          else
+            echo "✅ SERVER_IP is set: ${{ secrets.SERVER_IP }}"
+          fi
+
+          echo ""
+
+          # If any secrets are missing, fail with clear instructions
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ ERROR: Missing required GitHub secrets!"
+            echo ""
+            echo "Please add the following secrets in GitHub:"
+            echo "  1. Go to: https://github.com/Baileysgin/Smokava/settings/secrets/actions"
+            echo "  2. Click 'New repository secret'"
+            echo "  3. Add each missing secret:"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              case "$secret" in
+                SSH_PRIVATE_KEY)
+                  echo "     - Name: SSH_PRIVATE_KEY"
+                  echo "       Value: Your SSH private key (full key including -----BEGIN and -----END lines)"
+                  ;;
+                SERVER_IP)
+                  echo "     - Name: SERVER_IP"
+                  echo "       Value: 91.107.241.245"
+                  ;;
+              esac
+            done
+            echo ""
+            echo "After adding secrets, re-run this workflow."
+            exit 1
+          fi
+
+          echo "✅ All required secrets are present!"
+          echo ""
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -40,15 +94,13 @@ jobs:
 
       - name: Configure SSH target
         run: |
-          if [ -z "${{ secrets.SERVER_IP }}" ]; then
-            echo "❌ SERVER_IP secret is not set"
-            exit 1
-          fi
+          echo "🔧 Configuring SSH connection..."
           SSH_USER="${{ secrets.SSH_USER || 'root' }}"
           SSH_PORT="${{ secrets.SSH_PORT || '22' }}"
           SSH_TARGET="${SSH_USER}@${{ secrets.SERVER_IP }}"
           echo "SSH_TARGET=${SSH_TARGET}" >> $GITHUB_ENV
           echo "SSH_PORT=${SSH_PORT}" >> $GITHUB_ENV
+          echo "✅ SSH target configured: ${SSH_TARGET} (port: ${SSH_PORT})"
 
       - name: Deploy to server
         timeout-minutes: 30

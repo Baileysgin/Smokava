@@ -16,6 +16,64 @@ jobs:
       actions: write
 
     steps:
+      - name: Validate Required Secrets
+        run: |
+          echo "🔍 Validating required GitHub secrets..."
+          echo ""
+
+          MISSING_SECRETS=()
+
+          # Check SSH_PRIVATE_KEY (required)
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            MISSING_SECRETS+=("SSH_PRIVATE_KEY")
+            echo "❌ SSH_PRIVATE_KEY is missing"
+          else
+            echo "✅ SSH_PRIVATE_KEY is set"
+          fi
+
+          # Check SERVER_IP (required, but can use SSH_HOST as fallback)
+          if [ -z "${{ secrets.SERVER_IP }}" ] && [ -z "${{ secrets.SSH_HOST }}" ]; then
+            MISSING_SECRETS+=("SERVER_IP")
+            echo "❌ SERVER_IP is missing (or SSH_HOST as alternative)"
+          else
+            if [ -n "${{ secrets.SERVER_IP }}" ]; then
+              echo "✅ SERVER_IP is set: ${{ secrets.SERVER_IP }}"
+            else
+              echo "✅ SSH_HOST is set (using as fallback)"
+            fi
+          fi
+
+          echo ""
+
+          # If any secrets are missing, fail with clear instructions
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ ERROR: Missing required GitHub secrets!"
+            echo ""
+            echo "Please add the following secrets in GitHub:"
+            echo "  1. Go to: https://github.com/Baileysgin/Smokava/settings/secrets/actions"
+            echo "  2. Click 'New repository secret'"
+            echo "  3. Add each missing secret:"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              case "$secret" in
+                SSH_PRIVATE_KEY)
+                  echo "     - Name: SSH_PRIVATE_KEY"
+                  echo "       Value: Your SSH private key (full key including -----BEGIN and -----END lines)"
+                  ;;
+                SERVER_IP)
+                  echo "     - Name: SERVER_IP"
+                  echo "       Value: 91.107.241.245"
+                  ;;
+              esac
+            done
+            echo ""
+            echo "After adding secrets, re-run this workflow."
+            exit 1
+          fi
+
+          echo "✅ All required secrets are present!"
+          echo ""
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -28,16 +86,28 @@ jobs:
 
       - name: Configure SSH settings
         run: |
-          # Determine SSH connection string
-          if [ -n "${{ secrets.SSH_HOST }}" ]; then
-            SSH_TARGET="${{ secrets.SSH_HOST }}"
-          elif [ -n "${{ secrets.SERVER_IP }}" ]; then
+          echo "🔧 Configuring SSH connection..."
+
+          # Prefer SERVER_IP over SSH_HOST (normalize to SERVER_IP)
+          if [ -n "${{ secrets.SERVER_IP }}" ]; then
             SSH_USER="${{ secrets.SSH_USER || 'root' }}"
             SSH_PORT="${{ secrets.SSH_PORT || '22' }}"
             SSH_TARGET="${SSH_USER}@${{ secrets.SERVER_IP }}"
             SSH_PORT_ARG="-p ${SSH_PORT}"
+            echo "✅ Using SERVER_IP: ${{ secrets.SERVER_IP }}"
+          elif [ -n "${{ secrets.SSH_HOST }}" ]; then
+            # Parse SSH_HOST format (user@host or just host)
+            SSH_TARGET="${{ secrets.SSH_HOST }}"
+            SSH_PORT_ARG=""
+            if [[ "${{ secrets.SSH_HOST }}" == *"@"* ]]; then
+              echo "✅ Using SSH_HOST: ${{ secrets.SSH_HOST }}"
+            else
+              SSH_TARGET="root@${{ secrets.SSH_HOST }}"
+              echo "✅ Using SSH_HOST (with default user): $SSH_TARGET"
+            fi
           else
-            echo "❌ Neither SSH_HOST nor SERVER_IP is set in secrets"
+            echo "❌ ERROR: Neither SERVER_IP nor SSH_HOST is set"
+            echo "❌ This should not happen - validation step should have caught this"
             exit 1
           fi
 
@@ -46,6 +116,9 @@ jobs:
           echo "SSH_PORT_ARG=${SSH_PORT_ARG:-}" >> $GITHUB_ENV
 
           echo "✅ SSH target configured: ${SSH_TARGET}"
+          if [ -n "${SSH_PORT_ARG}" ]; then
+            echo "   Port: ${{ secrets.SSH_PORT || '22' }}"
+          fi
 
       - name: Verify SSH connection
         run: |
