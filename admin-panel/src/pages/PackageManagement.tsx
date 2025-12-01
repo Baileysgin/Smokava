@@ -11,8 +11,6 @@ import {
   Typography,
   Select,
   Modal,
-  DatePicker,
-  TimePicker,
 } from 'antd';
 import dayjs from 'dayjs';
 import { SaveOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -226,9 +224,6 @@ const PackageManagement = () => {
         return;
       }
 
-      // Process time windows
-      const timeWindows = values.timeWindows?.filter((tw: any) => tw && tw.start && tw.end) || [];
-
       const updateData = {
         item_quantity: values.item_quantity,
         total_price: values.total_price,
@@ -238,13 +233,7 @@ const PackageManagement = () => {
         feature_usage_fa: values.feature_usage_fa || '',
         feature_validity_fa: values.feature_validity_fa || '',
         feature_support_fa: values.feature_support_fa || '',
-        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
-        timeWindows: timeWindows.map((tw: any) => ({
-          start: tw.start.format('HH:mm'),
-          end: tw.end.format('HH:mm'),
-          timezone: 'Asia/Tehran'
-        })),
+        durationDays: values.durationDays || null, // 30, 90, 365, or null for no expiry
       };
 
       console.log('Update data:', updateData);
@@ -578,73 +567,26 @@ const PackageManagement = () => {
             />
           </Form.Item>
 
-          <Card title="تنظیمات زمان‌بندی (اختیاری)" style={{ marginTop: 16 }}>
+          <Card title="تنظیمات اعتبار (اختیاری)" style={{ marginTop: 16 }}>
             <Form.Item
-              name="startDate"
-              label="تاریخ شروع"
-              tooltip="تاریخ شروع فعال‌سازی پکیج"
+              name="durationDays"
+              label="مدت اعتبار (روز)"
+              tooltip="تعداد روزهایی که کاربر می‌تواند از این پکیج استفاده کند. خالی بگذارید برای بدون انقضا"
             >
-              <DatePicker
+              <Select
                 style={{ width: '100%' }}
-                format="YYYY-MM-DD"
-                placeholder="انتخاب تاریخ شروع"
-              />
+                placeholder="انتخاب مدت اعتبار"
+                allowClear
+              >
+                <Select.Option value={30}>30 روز (یک ماه)</Select.Option>
+                <Select.Option value={90}>90 روز (سه ماه)</Select.Option>
+                <Select.Option value={180}>180 روز (شش ماه)</Select.Option>
+                <Select.Option value={365}>365 روز (یک سال)</Select.Option>
+              </Select>
             </Form.Item>
-
-            <Form.Item
-              name="endDate"
-              label="تاریخ پایان"
-              tooltip="تاریخ انقضای پکیج"
-            >
-              <DatePicker
-                style={{ width: '100%' }}
-                format="YYYY-MM-DD"
-                placeholder="انتخاب تاریخ پایان"
-              />
-            </Form.Item>
-
-            <Form.List name="timeWindows">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'start']}
-                        label="شروع"
-                        rules={[{ required: true, message: 'زمان شروع را وارد کنید' }]}
-                      >
-                        <TimePicker
-                          format="HH:mm"
-                          placeholder="شروع"
-                          style={{ width: 120 }}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'end']}
-                        label="پایان"
-                        rules={[{ required: true, message: 'زمان پایان را وارد کنید' }]}
-                      >
-                        <TimePicker
-                          format="HH:mm"
-                          placeholder="پایان"
-                          style={{ width: 120 }}
-                        />
-                      </Form.Item>
-                      <Button type="link" danger onClick={() => remove(name)}>
-                        حذف
-                      </Button>
-                    </Space>
-                  ))}
-                  <Form.Item>
-                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                      افزودن بازه زمانی
-                    </Button>
-                  </Form.Item>
-                </>
-              )}
-            </Form.List>
+            <div style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
+              💡 پس از خرید، کاربر {form.getFieldValue('durationDays') || 'X'} روز فرصت دارد تا از این پکیج استفاده کند
+            </div>
           </Card>
 
           <Form.Item>

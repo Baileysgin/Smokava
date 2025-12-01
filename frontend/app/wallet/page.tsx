@@ -9,52 +9,25 @@ import { useRestaurantStore } from '@/store/restaurantStore';
 import BottomNav from '@/components/BottomNav';
 import RatingModal from '@/components/RatingModal';
 
-// Component to display package time information
+// Component to display package expiry information
 function PackageTimeInfo({ package: pkg }: { package: any }) {
-  const { user } = useAuthStore();
-  const { getPackageRemainingTime } = usePackageStore();
-  const [timeInfo, setTimeInfo] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (pkg?._id && user?._id && (pkg.timeWindows?.length > 0 || pkg.startDate || pkg.endDate)) {
-      setLoading(true);
-      getPackageRemainingTime(user._id, pkg._id)
-        .then((data) => {
-          setTimeInfo(data);
-        })
-        .catch((err) => {
-          console.error('Error fetching time info:', err);
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [pkg?._id, user?._id, getPackageRemainingTime]);
-
-  if (loading) {
+  if (!pkg?.expiresAt) {
+    // No expiry - package never expires
     return (
-      <div className="flex items-center gap-2 text-accent-500">
-        <Clock className="w-4 h-4 animate-spin" />
-        <span className="text-xs">در حال بارگذاری...</span>
+      <div className="flex items-center gap-2 text-green-400">
+        <Clock className="w-4 h-4" />
+        <span className="text-xs">بدون انقضا</span>
       </div>
     );
   }
 
-  if (!timeInfo && !pkg?.endDate) {
-    // Fallback to expiry date if no time info
-    const date = new Date(pkg?.purchasedAt || Date.now());
-    date.setMonth(date.getMonth() + 3);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('fa-IR', { month: 'long' });
-    const year = date.getFullYear();
-    return (
-      <div className="flex items-center gap-2 text-accent-500">
-        <ArrowUp className="w-4 h-4" />
-        <span className="text-xs">اعتبار تا {`${day} ${month} ${year}`}</span>
-      </div>
-    );
-  }
+  const now = new Date();
+  const expiryDate = new Date(pkg.expiresAt);
+  const diffMs = expiryDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-  if (timeInfo?.windowStatus === 'expired') {
+  if (diffDays < 0) {
+    // Expired
     return (
       <div className="flex items-center gap-2 text-red-400">
         <Clock className="w-4 h-4" />
@@ -63,84 +36,34 @@ function PackageTimeInfo({ package: pkg }: { package: any }) {
     );
   }
 
-  if (timeInfo?.windowStatus === 'not_started' && timeInfo?.nextAvailableWindow) {
-    const nextDate = new Date(timeInfo.nextAvailableWindow);
-    const day = nextDate.getDate();
-    const month = nextDate.toLocaleDateString('fa-IR', { month: 'long' });
+  if (diffDays === 0) {
+    // Expires today
     return (
       <div className="flex items-center gap-2 text-yellow-400">
         <Clock className="w-4 h-4" />
-        <span className="text-xs">شروع: {`${day} ${month}`}</span>
+        <span className="text-xs">امروز منقضی می‌شود</span>
       </div>
     );
   }
 
-  if (timeInfo?.windowStatus === 'waiting' && timeInfo?.nextAvailableWindow) {
-    const nextDate = new Date(timeInfo.nextAvailableWindow);
-    const now = new Date();
-    const diffMs = nextDate.getTime() - now.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (diffHours > 0) {
-      return (
-        <div className="flex items-center gap-2 text-yellow-400">
-          <Clock className="w-4 h-4" />
-          <span className="text-xs">بازگشایی: {diffHours} ساعت دیگر</span>
-        </div>
-      );
-    } else if (diffMins > 0) {
-      return (
-        <div className="flex items-center gap-2 text-yellow-400">
-          <Clock className="w-4 h-4" />
-          <span className="text-xs">بازگشایی: {diffMins} دقیقه دیگر</span>
-        </div>
-      );
-    }
-  }
-
-  if (timeInfo?.windowStatus === 'available') {
-    if (timeInfo?.nextAvailableWindow) {
-      const nextDate = new Date(timeInfo.nextAvailableWindow);
-      const now = new Date();
-      const diffMs = nextDate.getTime() - now.getTime();
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-      if (diffHours > 0) {
-        return (
-          <div className="flex items-center gap-2 text-green-400">
-            <Clock className="w-4 h-4" />
-            <span className="text-xs">باقی مانده: {diffHours} ساعت</span>
-          </div>
-        );
-      } else if (diffMins > 0) {
-        return (
-          <div className="flex items-center gap-2 text-green-400">
-            <Clock className="w-4 h-4" />
-            <span className="text-xs">باقی مانده: {diffMins} دقیقه</span>
-          </div>
-        );
-      }
-    }
+  if (diffDays <= 7) {
+    // Less than a week remaining
     return (
-      <div className="flex items-center gap-2 text-green-400">
+      <div className="flex items-center gap-2 text-yellow-400">
         <Clock className="w-4 h-4" />
-        <span className="text-xs">در دسترس</span>
+        <span className="text-xs">{diffDays} روز باقی مانده</span>
       </div>
     );
   }
 
-  // Fallback
-  const date = new Date(pkg?.purchasedAt || Date.now());
-  date.setMonth(date.getMonth() + 3);
-  const day = date.getDate();
-  const month = date.toLocaleDateString('fa-IR', { month: 'long' });
-  const year = date.getFullYear();
+  // Show expiry date
+  const day = expiryDate.getDate();
+  const month = expiryDate.toLocaleDateString('fa-IR', { month: 'long' });
+  const year = expiryDate.getFullYear();
   return (
     <div className="flex items-center gap-2 text-accent-500">
-      <ArrowUp className="w-4 h-4" />
-      <span className="text-xs">اعتبار تا {`${day} ${month} ${year}`}</span>
+      <Clock className="w-4 h-4" />
+      <span className="text-xs">اعتبار تا {`${day} ${month} ${year}`} ({diffDays} روز)</span>
     </div>
   );
 }

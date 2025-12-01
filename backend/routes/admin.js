@@ -692,9 +692,7 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       feature_validity_fa,
       feature_support_fa,
       package_icon,
-      startDate,
-      endDate,
-      timeWindows,
+      durationDays, // 30, 90, 365, or null for no expiry
     } = req.body;
 
     // Find the package by ID or create a new one
@@ -762,16 +760,17 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       package.package_icon = package_icon;
     }
 
-    // Update time window fields (these are stored in UserPackage, not Package)
-    // But we can store them in Package model for reference
-    if (startDate !== undefined) {
-      package.startDate = startDate ? new Date(startDate) : null;
-    }
-    if (endDate !== undefined) {
-      package.endDate = endDate ? new Date(endDate) : null;
-    }
-    if (timeWindows !== undefined) {
-      package.timeWindows = timeWindows || [];
+    // Update durationDays field
+    if (durationDays !== undefined) {
+      if (durationDays === null || durationDays === '') {
+        package.durationDays = null; // No expiry
+      } else {
+        const days = parseInt(durationDays);
+        if (isNaN(days) || days < 0) {
+          return res.status(400).json({ message: 'durationDays must be a non-negative number' });
+        }
+        package.durationDays = days;
+      }
     }
 
     await package.save();
@@ -1037,9 +1036,12 @@ router.post('/activate-package', auth, requireAdmin, async (req, res) => {
       remainingCount: package.count,
       status: 'active',
       purchasedAt: new Date(),
-      startDate: startDate ? new Date(startDate) : new Date(),
-      endDate: endDate ? new Date(endDate) : null,
-      timeWindows: timeWindows || package.timeWindows || []
+      // Calculate expiry date from package durationDays
+      expiresAt: package.durationDays ? (() => {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + package.durationDays);
+        return expiryDate;
+      })() : null
     });
 
     await userPackage.save();

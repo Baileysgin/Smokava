@@ -65,7 +65,7 @@ router.post('/payment-callback', auth, async (req, res) => {
     const userPackage = await UserPackage.findOne({
       _id: userPackageId,
       user: req.user._id
-    });
+    }).populate('package');
 
     if (!userPackage) {
       return res.status(404).json({ message: 'Package not found' });
@@ -74,6 +74,14 @@ router.post('/payment-callback', auth, async (req, res) => {
     // Activate package
     userPackage.remainingCount = userPackage.totalCount;
     userPackage.status = 'active';
+    
+    // Calculate expiry date from package durationDays
+    if (userPackage.package && userPackage.package.durationDays) {
+      const expiryDate = new Date(userPackage.purchasedAt);
+      expiryDate.setDate(expiryDate.getDate() + userPackage.package.durationDays);
+      userPackage.expiresAt = expiryDate;
+    }
+    
     await userPackage.save();
 
     res.json({ message: 'Package activated successfully', userPackage });
@@ -200,70 +208,17 @@ router.post('/verify-consumption-otp', async (req, res) => {
       status: 'active'
     }).sort({ purchasedAt: 1 }); // Use oldest packages first
 
-    // Validate time windows for each package
-    const now = moment.tz('Asia/Tehran');
+    // Validate expiry for each package
+    const now = new Date();
     const validPackages = [];
 
     for (const userPackage of userPackages) {
-      // Check date range
-      if (userPackage.startDate && now.isBefore(moment(userPackage.startDate).tz('Asia/Tehran'))) {
-        continue; // Package not started yet
-      }
-      if (userPackage.endDate && now.isAfter(moment(userPackage.endDate).tz('Asia/Tehran'))) {
-        continue; // Package expired
-      }
-
-      // Check time windows
-      if (userPackage.timeWindows && userPackage.timeWindows.length > 0) {
-        const currentTime = now.format('HH:mm');
-        let inWindow = false;
-
-        for (const window of userPackage.timeWindows) {
-          const windowStart = window.start;
-          const windowEnd = window.end;
-
-          // Handle time comparison (e.g., "13:00" to "17:00")
-          if (windowStart <= windowEnd) {
-            // Normal window (e.g., 13:00 to 17:00)
-            inWindow = currentTime >= windowStart && currentTime <= windowEnd;
-          } else {
-            // Overnight window (e.g., 22:00 to 02:00)
-            inWindow = currentTime >= windowStart || currentTime <= windowEnd;
-          }
-
-          if (inWindow) break;
-        }
-
-        if (!inWindow) {
-          // Find next available window
-          let nextWindow = null;
-          for (const window of userPackage.timeWindows) {
-            const windowStart = window.start;
-            const today = now.clone().startOf('day');
-            const windowStartTime = today.clone().add(windowStart.split(':')[0], 'hours').add(windowStart.split(':')[1], 'minutes');
-
-            if (now.isBefore(windowStartTime)) {
-              nextWindow = windowStartTime;
-              break;
-            }
-          }
-
-          // If no window today, use first window tomorrow
-          if (!nextWindow && userPackage.timeWindows.length > 0) {
-            const firstWindow = userPackage.timeWindows[0];
-            nextWindow = now.clone().add(1, 'day').startOf('day')
-              .add(firstWindow.start.split(':')[0], 'hours')
-              .add(firstWindow.start.split(':')[1], 'minutes');
-          }
-
-          return res.status(403).json({
-            message: 'این بسته در این ساعت فعال نیست',
-            reason: 'Package can only be used during specified time windows',
-            nextAvailableWindow: nextWindow ? nextWindow.toISOString() : null,
-            currentTime: now.format('HH:mm'),
-            timezone: 'Asia/Tehran'
-          });
-        }
+      // Check if package has expired
+      if (userPackage.expiresAt && now > new Date(userPackage.expiresAt)) {
+        // Package expired - update status
+        userPackage.status = 'expired';
+        await userPackage.save();
+        continue; // Skip expired packages
       }
 
       validPackages.push(userPackage);
@@ -423,105 +378,30 @@ router.get('/wallet/:userId/packages/:id/remaining-time', auth, async (req, res)
       return res.status(404).json({ message: 'Package not found' });
     }
 
-    const now = moment.tz('Asia/Tehran');
-    let nextAvailableWindow = null;
-    let windowStatus = 'available';
+    const now = new Date();
+    let status = 'active';
+    let remainingDays = null;
+    let expiresAt = userPackage.expiresAt || null;
 
-    // Check date range
-    if (userPackage.startDate && now.isBefore(moment(userPackage.startDate).tz('Asia/Tehran'))) {
-      windowStatus = 'not_started';
-      nextAvailableWindow = moment(userPackage.startDate).tz('Asia/Tehran').toISOString();
-    } else if (userPackage.endDate && now.isAfter(moment(userPackage.endDate).tz('Asia/Tehran'))) {
-      windowStatus = 'expired';
-    } else if (userPackage.timeWindows && userPackage.timeWindows.length > 0) {
-      const currentTime = now.format('HH:mm');
-      let inWindow = false;
-
-      for (const window of userPackage.timeWindows) {
-        const windowStart = window.start;
-        const windowEnd = window.end;
-
-        if (windowStart <= windowEnd) {
-          inWindow = currentTime >= windowStart && currentTime <= windowEnd;
-        } else {
-          inWindow = currentTime >= windowStart || currentTime <= windowEnd;
-        }
-
-        if (inWindow) {
-          windowStatus = 'available';
-          // Find when this window ends
-          const today = now.clone().startOf('day');
-          const windowEndTime = today.clone()
-            .add(windowEnd.split(':')[0], 'hours')
-            .add(windowEnd.split(':')[1], 'minutes');
-
-          if (now.isBefore(windowEndTime)) {
-            nextAvailableWindow = windowEndTime.toISOString();
-          } else {
-            // Window ends today, find next window
-            for (const nextWindow of userPackage.timeWindows) {
-              const nextStart = nextWindow.start;
-              const nextStartTime = today.clone()
-                .add(nextStart.split(':')[0], 'hours')
-                .add(nextStart.split(':')[1], 'minutes');
-
-              if (now.isBefore(nextStartTime)) {
-                nextAvailableWindow = nextStartTime.toISOString();
-                windowStatus = 'waiting';
-                break;
-              }
-            }
-
-            // If no window today, use first window tomorrow
-            if (!nextAvailableWindow && userPackage.timeWindows.length > 0) {
-              const firstWindow = userPackage.timeWindows[0];
-              nextAvailableWindow = now.clone().add(1, 'day').startOf('day')
-                .add(firstWindow.start.split(':')[0], 'hours')
-                .add(firstWindow.start.split(':')[1], 'minutes')
-                .toISOString();
-              windowStatus = 'waiting';
-            }
-          }
-          break;
-        }
-      }
-
-      if (!inWindow) {
-        windowStatus = 'waiting';
-        // Find next available window
-        for (const window of userPackage.timeWindows) {
-          const windowStart = window.start;
-          const today = now.clone().startOf('day');
-          const windowStartTime = today.clone()
-            .add(windowStart.split(':')[0], 'hours')
-            .add(windowStart.split(':')[1], 'minutes');
-
-          if (now.isBefore(windowStartTime)) {
-            nextAvailableWindow = windowStartTime.toISOString();
-            break;
-          }
-        }
-
-        if (!nextAvailableWindow && userPackage.timeWindows.length > 0) {
-          const firstWindow = userPackage.timeWindows[0];
-          nextAvailableWindow = now.clone().add(1, 'day').startOf('day')
-            .add(firstWindow.start.split(':')[0], 'hours')
-            .add(firstWindow.start.split(':')[1], 'minutes')
-            .toISOString();
-        }
+    // Calculate remaining days if package has expiry
+    if (expiresAt) {
+      const expiryDate = new Date(expiresAt);
+      if (now > expiryDate) {
+        status = 'expired';
+        remainingDays = 0;
+      } else {
+        const diffTime = expiryDate - now;
+        remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
     }
 
     const summary = {
       remainingTokens: userPackage.remainingCount,
       totalTokens: userPackage.totalCount,
-      windowStatus,
-      nextAvailableWindow,
-      currentTime: now.format('YYYY-MM-DD HH:mm:ss'),
-      timezone: 'Asia/Tehran',
-      timeWindows: userPackage.timeWindows || [],
-      startDate: userPackage.startDate || null,
-      endDate: userPackage.endDate || null
+      status,
+      remainingDays,
+      expiresAt,
+      purchasedAt: userPackage.purchasedAt
     };
 
     res.json(summary);
