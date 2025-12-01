@@ -164,12 +164,6 @@ const PackageManagement = () => {
       // Set form values
       console.log('📝 Setting form values from package data');
 
-      // Convert time windows to dayjs format
-      const timeWindows = (data.timeWindows || []).map((tw: any) => ({
-        start: tw.start ? dayjs(tw.start, 'HH:mm') : null,
-        end: tw.end ? dayjs(tw.end, 'HH:mm') : null,
-      }));
-
       form.setFieldsValue({
         item_quantity: data.count || 0,
         total_price: data.price || 0,
@@ -179,9 +173,7 @@ const PackageManagement = () => {
         feature_usage_fa: data.feature_usage_fa || '',
         feature_validity_fa: data.feature_validity_fa || '',
         feature_support_fa: data.feature_support_fa || '',
-        startDate: data.startDate ? dayjs(data.startDate) : null,
-        endDate: data.endDate ? dayjs(data.endDate) : null,
-        timeWindows: timeWindows.length > 0 ? timeWindows : undefined,
+        durationDays: data.durationDays || null, // 30, 90, 365, or null
       });
       console.log('✅ Form values set:', form.getFieldsValue());
     } catch (error: any) {

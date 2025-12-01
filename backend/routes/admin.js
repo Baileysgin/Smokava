@@ -1010,7 +1010,7 @@ router.get('/ratings/analytics', auth, requireAdmin, async (req, res) => {
 // Activate package for a user (Admin only)
 router.post('/activate-package', auth, requireAdmin, async (req, res) => {
   try {
-    const { userId, packageId, startDate, endDate, timeWindows } = req.body;
+    const { userId, packageId } = req.body;
 
     if (!userId || !packageId) {
       return res.status(400).json({ message: 'User ID and Package ID are required' });
