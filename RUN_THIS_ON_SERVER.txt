@@ -1,0 +1,28 @@
+═══════════════════════════════════════════════════════════════
+  FIX 502 BAD GATEWAY - RUN THESE COMMANDS ON YOUR SERVER
+═══════════════════════════════════════════════════════════════
+
+SSH into your server and run:
+
+cd /opt/smokava
+git pull origin main
+sudo bash DEPLOY_FIX_502.sh
+
+OR use the detailed fix script:
+
+sudo bash scripts/fix-502-deploy.sh
+
+═══════════════════════════════════════════════════════════════
+
+The script will:
+1. Pull latest code
+2. Stop admin-panel container
+3. Rebuild it
+4. Start it fresh
+5. Verify it's working
+6. Reload nginx
+
+Wait 30 seconds after it completes, then try:
+https://admin.smokava.com
+
+═══════════════════════════════════════════════════════════════
