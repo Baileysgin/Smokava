@@ -29,4 +29,3 @@ jobs:
           name: database-backup
           path: backup.gz
           retention-days: 7
-

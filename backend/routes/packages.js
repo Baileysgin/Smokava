@@ -74,14 +74,23 @@ router.post('/payment-callback', auth, async (req, res) => {
     // Activate package
     userPackage.remainingCount = userPackage.totalCount;
     userPackage.status = 'active';
-    
+
+    // Initialize restaurant allocations if package has them (bundle package)
+    if (userPackage.package && userPackage.package.restaurantAllocations && userPackage.package.restaurantAllocations.length > 0) {
+      userPackage.restaurantAllocations = userPackage.package.restaurantAllocations.map(allocation => ({
+        restaurant: allocation.restaurant,
+        totalCount: allocation.count,
+        remainingCount: allocation.count
+      }));
+    }
+
     // Calculate expiry date from package durationDays
     if (userPackage.package && userPackage.package.durationDays) {
       const expiryDate = new Date(userPackage.purchasedAt);
       expiryDate.setDate(expiryDate.getDate() + userPackage.package.durationDays);
       userPackage.expiresAt = expiryDate;
     }
-    
+
     await userPackage.save();
 
     res.json({ message: 'Package activated successfully', userPackage });
@@ -206,11 +215,12 @@ router.post('/verify-consumption-otp', async (req, res) => {
       user: user._id,
       remainingCount: { $gt: 0 },
       status: 'active'
-    }).sort({ purchasedAt: 1 }); // Use oldest packages first
+    }).populate('package').sort({ purchasedAt: 1 }); // Use oldest packages first
 
-    // Validate expiry for each package
+    // Validate expiry for each package and check restaurant allocations
     const now = new Date();
     const validPackages = [];
+    const restaurantId = user.consumptionOtpRestaurant;
 
     for (const userPackage of userPackages) {
       // Check if package has expired
@@ -221,13 +231,58 @@ router.post('/verify-consumption-otp', async (req, res) => {
         continue; // Skip expired packages
       }
 
-      validPackages.push(userPackage);
+      // Check if package has restaurant allocations (bundle package)
+      if (userPackage.restaurantAllocations && userPackage.restaurantAllocations.length > 0) {
+        // Find allocation for this restaurant
+        const allocation = userPackage.restaurantAllocations.find((alloc, index) => {
+          const allocRestaurantId = alloc.restaurant?._id
+            ? alloc.restaurant._id.toString()
+            : alloc.restaurant?.toString()
+            ? alloc.restaurant.toString()
+            : null;
+          return allocRestaurantId === restaurantId.toString();
+        });
+
+        if (allocation && allocation.remainingCount > 0) {
+          // Package has allocation for this restaurant
+          const allocationIndex = userPackage.restaurantAllocations.findIndex((alloc, idx) => {
+            const allocRestaurantId = alloc.restaurant?._id
+              ? alloc.restaurant._id.toString()
+              : alloc.restaurant?.toString()
+              ? alloc.restaurant.toString()
+              : null;
+            return allocRestaurantId === restaurantId.toString();
+          });
+          validPackages.push({
+            userPackage,
+            availableCount: allocation.remainingCount,
+            allocationIndex: allocationIndex
+          });
+        }
+      } else {
+        // Legacy: No restaurant allocations, check if package.restaurant matches
+        // Or if package has no restaurant restriction (global package)
+        const packageRestaurant = userPackage.package?.restaurant;
+        const packageRestaurantId = packageRestaurant?._id
+          ? packageRestaurant._id.toString()
+          : packageRestaurant?.toString()
+          ? packageRestaurant.toString()
+          : null;
+        if (!packageRestaurantId || packageRestaurantId === restaurantId.toString()) {
+          // Package can be used at this restaurant
+          validPackages.push({
+            userPackage,
+            availableCount: userPackage.remainingCount,
+            allocationIndex: null // No specific allocation
+          });
+        }
+      }
     }
 
     if (validPackages.length === 0) {
       return res.status(403).json({
-        message: 'این بسته در این ساعت فعال نیست',
-        reason: 'No active packages available in current time window'
+        message: 'این بسته در این رستوران قابل استفاده نیست یا اعتبار آن به پایان رسیده است',
+        reason: 'No active packages available for this restaurant'
       });
     }
 
@@ -237,13 +292,22 @@ router.post('/verify-consumption-otp', async (req, res) => {
     const redeemLogId = new mongoose.Types.ObjectId(); // Generate unique ID for this redemption
 
     // Deduct from packages (use validPackages instead of userPackages)
-    for (const userPackage of validPackages) {
+    for (const { userPackage, availableCount, allocationIndex } of validPackages) {
       if (remainingToDeduct <= 0) break;
 
-      const deductCount = Math.min(remainingToDeduct, userPackage.remainingCount);
+      const deductCount = Math.min(remainingToDeduct, availableCount);
+
+      // Update restaurant allocation if it exists
+      if (allocationIndex !== null && userPackage.restaurantAllocations[allocationIndex]) {
+        userPackage.restaurantAllocations[allocationIndex].remainingCount -= deductCount;
+      }
+
+      // Update overall remaining count
       userPackage.remainingCount -= deductCount;
+
+      // Add to history
       userPackage.history.push({
-        restaurant: user.consumptionOtpRestaurant,
+        restaurant: restaurantId,
         count: deductCount,
         flavor: '',
         consumedAt: new Date(),

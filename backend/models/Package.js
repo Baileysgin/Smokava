@@ -77,6 +77,26 @@ const packageSchema = new mongoose.Schema({
   durationDays: {
     type: Number,
     default: null // null means no expiry
+  },
+  // Restaurant allocations - array of {restaurantId, count}
+  // Allows bundle packages across multiple restaurants
+  restaurantAllocations: [{
+    restaurant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true
+    },
+    count: {
+      type: Number,
+      required: true,
+      min: 1
+    }
+  }],
+  // Legacy single restaurant field (for backward compatibility)
+  restaurant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Restaurant',
+    required: false // Made optional to support bundle packages
   }
 });
 

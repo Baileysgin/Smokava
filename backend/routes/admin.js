@@ -390,13 +390,13 @@ router.get('/users', auth, requireAdmin, async (req, res) => {
     console.log('📊 GET /admin/users - Request received');
     console.log('📊 MongoDB connection state:', mongoose.connection.readyState);
     console.log('📊 Database name:', mongoose.connection.db?.databaseName);
-    
+
     const { page = 1, limit = 20 } = req.query;
 
     // Check database connection
     if (mongoose.connection.readyState !== 1) {
       console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
-      return res.status(503).json({ 
+      return res.status(503).json({
         message: 'Database connection error',
         error: 'MongoDB not connected',
         users: [],
@@ -429,8 +429,8 @@ router.get('/users', auth, requireAdmin, async (req, res) => {
     console.error('❌ Get users error:', error);
     console.error('Error stack:', error.stack);
     console.error('MongoDB state:', mongoose.connection.readyState);
-    res.status(500).json({ 
-      message: 'Server error', 
+    res.status(500).json({
+      message: 'Server error',
       error: error.message,
       users: [],
       total: 0,
@@ -594,13 +594,19 @@ router.get('/packages', auth, requireAdmin, async (req, res) => {
     console.log('Backend: /admin/packages endpoint hit');
     console.log('Backend: User:', req.user ? { id: req.user._id, role: req.user.role } : 'none');
 
-    // Get packages - try sorting by createdAt, fallback to _id
+    // Get packages - try sorting by createdAt, fallback to _id, populate restaurants
     let packages;
     try {
-      packages = await Package.find().sort({ createdAt: -1 });
+      packages = await Package.find()
+        .populate('restaurant', 'nameFa addressFa')
+        .populate('restaurantAllocations.restaurant', 'nameFa addressFa')
+        .sort({ createdAt: -1 });
     } catch (sortError) {
       console.log('Sort by createdAt failed, using _id');
-      packages = await Package.find().sort({ _id: -1 });
+      packages = await Package.find()
+        .populate('restaurant', 'nameFa addressFa')
+        .populate('restaurantAllocations.restaurant', 'nameFa addressFa')
+        .sort({ _id: -1 });
     }
 
     console.log('Backend: Found', packages.length, 'packages');
@@ -628,7 +634,9 @@ router.get('/packages', auth, requireAdmin, async (req, res) => {
 router.get('/package/:id', auth, requireAdmin, async (req, res) => {
   try {
     console.log('📦 GET /admin/package/:id - Request received for package:', req.params.id);
-    const package = await Package.findById(req.params.id);
+    const package = await Package.findById(req.params.id)
+      .populate('restaurant', 'nameFa addressFa')
+      .populate('restaurantAllocations.restaurant', 'nameFa addressFa');
 
     if (!package) {
       console.log('❌ Package not found:', req.params.id);
@@ -693,7 +701,57 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       feature_support_fa,
       package_icon,
       durationDays, // 30, 90, 365, or null for no expiry
+      restaurantId, // Legacy: Single restaurant assignment
+      restaurantAllocations, // New: Array of {restaurantId, count} for bundle packages
     } = req.body;
+
+    // Validate: Either restaurantAllocations OR restaurantId must be provided
+    if (!restaurantAllocations || !Array.isArray(restaurantAllocations) || restaurantAllocations.length === 0) {
+      // Fallback to single restaurantId for backward compatibility
+      if (!restaurantId) {
+        return res.status(400).json({
+          message: 'Either restaurantAllocations array or restaurantId is required. Please assign this package to at least one restaurant.'
+        });
+      }
+
+      // Verify single restaurant exists
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant) {
+        return res.status(404).json({ message: 'Restaurant not found' });
+      }
+    } else {
+      // Validate restaurantAllocations array
+      let totalAllocationCount = 0;
+      for (const allocation of restaurantAllocations) {
+        if (!allocation.restaurantId || !allocation.count) {
+          return res.status(400).json({
+            message: 'Each restaurantAllocation must have restaurantId and count'
+          });
+        }
+        if (!Number.isInteger(Number(allocation.count)) || allocation.count < 1) {
+          return res.status(400).json({
+            message: 'Allocation count must be a positive integer'
+          });
+        }
+
+        // Verify restaurant exists
+        const restaurant = await Restaurant.findById(allocation.restaurantId);
+        if (!restaurant) {
+          return res.status(404).json({
+            message: `Restaurant not found: ${allocation.restaurantId}`
+          });
+        }
+
+        totalAllocationCount += allocation.count;
+      }
+
+      // Validate total allocation count matches item_quantity
+      if (item_quantity !== undefined && totalAllocationCount !== item_quantity) {
+        return res.status(400).json({
+          message: `Total restaurant allocations (${totalAllocationCount}) must equal item_quantity (${item_quantity})`
+        });
+      }
+    }
 
     // Find the package by ID or create a new one
     let package;
@@ -773,10 +831,30 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       }
     }
 
+    // Update restaurant allocations (bundle packages)
+    if (restaurantAllocations && Array.isArray(restaurantAllocations) && restaurantAllocations.length > 0) {
+      package.restaurantAllocations = restaurantAllocations.map(allocation => ({
+        restaurant: allocation.restaurantId,
+        count: allocation.count
+      }));
+      // Set legacy restaurant field to first restaurant for backward compatibility
+      package.restaurant = restaurantAllocations[0].restaurantId;
+    } else if (restaurantId !== undefined) {
+      // Legacy: Single restaurant assignment
+      package.restaurant = restaurantId;
+      // Convert to restaurantAllocations format
+      package.restaurantAllocations = [{
+        restaurant: restaurantId,
+        count: package.count || item_quantity || 0
+      }];
+    }
+
     await package.save();
 
-    // Reload from database to ensure all fields are included
-    const savedPackage = await Package.findById(package._id);
+    // Reload from database to ensure all fields are included, populate restaurants
+    const savedPackage = await Package.findById(package._id)
+      .populate('restaurant', 'nameFa addressFa')
+      .populate('restaurantAllocations.restaurant', 'nameFa addressFa');
     const pkgObj = savedPackage.toObject ? savedPackage.toObject() : savedPackage;
 
     console.log('💾 Package saved successfully:', {
@@ -1028,6 +1106,16 @@ router.post('/activate-package', auth, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Package not found' });
     }
 
+    // Initialize restaurant allocations if package has them (bundle package)
+    let restaurantAllocations = [];
+    if (package.restaurantAllocations && package.restaurantAllocations.length > 0) {
+      restaurantAllocations = package.restaurantAllocations.map(allocation => ({
+        restaurant: allocation.restaurant,
+        totalCount: allocation.count,
+        remainingCount: allocation.count
+      }));
+    }
+
     // Create user package with time-based fields
     const userPackage = new UserPackage({
       user: userId,
@@ -1036,6 +1124,7 @@ router.post('/activate-package', auth, requireAdmin, async (req, res) => {
       remainingCount: package.count,
       status: 'active',
       purchasedAt: new Date(),
+      restaurantAllocations: restaurantAllocations,
       // Calculate expiry date from package durationDays
       expiresAt: package.durationDays ? (() => {
         const expiryDate = new Date();

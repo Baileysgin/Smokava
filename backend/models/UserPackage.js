@@ -36,6 +36,25 @@ const userPackageSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  // Restaurant-specific allocations for bundle packages
+  // Tracks remaining count per restaurant
+  restaurantAllocations: [{
+    restaurant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true
+    },
+    totalCount: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    remainingCount: {
+      type: Number,
+      required: true,
+      min: 0
+    }
+  }],
   purchasedAt: {
     type: Date,
     default: Date.now

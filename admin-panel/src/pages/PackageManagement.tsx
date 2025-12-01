@@ -17,6 +17,11 @@ import { adminService } from '../services/adminService';
 
 const { Title } = Typography;
 
+interface RestaurantAllocation {
+  restaurantId: string;
+  count: number;
+}
+
 interface PackageData {
   _id?: string;
   name: string;
@@ -30,6 +35,19 @@ interface PackageData {
   feature_usage_fa?: string;
   feature_validity_fa?: string;
   feature_support_fa?: string;
+  restaurant?: {
+    _id: string;
+    nameFa: string;
+    addressFa?: string;
+  };
+  restaurantAllocations?: Array<{
+    restaurant: {
+      _id: string;
+      nameFa: string;
+      addressFa?: string;
+    };
+    count: number;
+  }>;
 }
 
 const PackageManagement = () => {
@@ -40,6 +58,8 @@ const PackageManagement = () => {
   const [packageData, setPackageData] = useState<PackageData | null>(null);
   const [packages, setPackages] = useState<PackageData[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null | undefined>(undefined);
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [loadingRestaurants, setLoadingRestaurants] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -51,10 +71,24 @@ const PackageManagement = () => {
   useEffect(() => {
     const init = async () => {
       console.log('=== Component Mounted - Loading Packages ===');
+      await loadRestaurants();
       await loadAllPackages();
     };
     init();
   }, []);
+
+  const loadRestaurants = async () => {
+    try {
+      setLoadingRestaurants(true);
+      const data = await adminService.getRestaurants();
+      setRestaurants(data || []);
+    } catch (error: any) {
+      console.error('Error loading restaurants:', error);
+      message.error('خطا در بارگذاری لیست رستوران‌ها');
+    } finally {
+      setLoadingRestaurants(false);
+    }
+  };
 
   useEffect(() => {
     console.log('🔄 selectedPackageId changed:', selectedPackageId);
@@ -163,6 +197,15 @@ const PackageManagement = () => {
       // Set form values
       console.log('📝 Setting form values from package data');
 
+      // Convert restaurantAllocations to form format
+      const allocations = data.restaurantAllocations && data.restaurantAllocations.length > 0
+        ? data.restaurantAllocations.map((alloc: any) => ({
+            restaurantId: alloc.restaurant?._id || alloc.restaurant,
+            count: alloc.count
+          }))
+        : data.restaurant ? [{ restaurantId: data.restaurant._id, count: data.count || 0 }]
+        : [];
+
       form.setFieldsValue({
         item_quantity: data.count || 0,
         total_price: data.price || 0,
@@ -173,6 +216,7 @@ const PackageManagement = () => {
         feature_validity_fa: data.feature_validity_fa || '',
         feature_support_fa: data.feature_support_fa || '',
         durationDays: data.durationDays || null, // 30, 90, 365, or null
+        restaurantAllocations: allocations, // Bundle restaurant allocations
       });
       console.log('✅ Form values set:', form.getFieldsValue());
     } catch (error: any) {
@@ -215,6 +259,21 @@ const PackageManagement = () => {
         return;
       }
 
+      // Validate restaurant allocations
+      if (!values.restaurantAllocations || !Array.isArray(values.restaurantAllocations) || values.restaurantAllocations.length === 0) {
+        message.error('لطفا حداقل یک رستوران را انتخاب کنید. هر پکیج باید به یک یا چند رستوران اختصاص داده شود.');
+        setLoading(false);
+        return;
+      }
+
+      // Validate total allocation count matches item_quantity
+      const totalAllocationCount = values.restaurantAllocations.reduce((sum: number, alloc: RestaurantAllocation) => sum + (alloc.count || 0), 0);
+      if (totalAllocationCount !== values.item_quantity) {
+        message.error(`تعداد کل تخصیص‌های رستوران (${totalAllocationCount}) باید برابر با تعداد آیتم (${values.item_quantity}) باشد.`);
+        setLoading(false);
+        return;
+      }
+
       const updateData = {
         item_quantity: values.item_quantity,
         total_price: values.total_price,
@@ -225,6 +284,7 @@ const PackageManagement = () => {
         feature_validity_fa: values.feature_validity_fa || '',
         feature_support_fa: values.feature_support_fa || '',
         durationDays: values.durationDays || null, // 30, 90, 365, or null for no expiry
+        restaurantAllocations: values.restaurantAllocations, // Bundle restaurant allocations
       };
 
       console.log('Update data:', updateData);
@@ -445,6 +505,7 @@ const PackageManagement = () => {
           initialValues={{
             item_quantity: 0,
             total_price: 0,
+            restaurantAllocations: [{ restaurantId: undefined, count: 0 }], // Start with one empty allocation
           }}
         >
           <Form.Item
@@ -515,6 +576,83 @@ const PackageManagement = () => {
           </Form.Item>
 
           <Form.Item
+            label="تخصیص رستوران‌ها (Bundle Package)"
+            required
+            tooltip="می‌توانید پکیج را بین چند رستوران تقسیم کنید. مثال: 8 عدد در رستوران A و 2 عدد در رستوران B"
+          >
+            <Form.List name="restaurantAllocations">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'restaurantId']}
+                        rules={[{ required: true, message: 'رستوران را انتخاب کنید' }]}
+                        style={{ width: 300 }}
+                      >
+                        <Select
+                          placeholder="انتخاب رستوران"
+                          loading={loadingRestaurants}
+                          showSearch
+                          filterOption={(input, option) => {
+                            const label = option?.children?.toString() || '';
+                            return label.toLowerCase().includes(input.toLowerCase());
+                          }}
+                        >
+                          {restaurants.map((restaurant) => (
+                            <Select.Option key={restaurant._id} value={restaurant._id}>
+                              {restaurant.nameFa} {restaurant.addressFa ? `- ${restaurant.addressFa}` : ''}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'count']}
+                        rules={[
+                          { required: true, message: 'تعداد را وارد کنید' },
+                          { type: 'number', min: 1, message: 'حداقل 1 عدد' }
+                        ]}
+                        style={{ width: 150 }}
+                      >
+                        <InputNumber
+                          placeholder="تعداد"
+                          min={1}
+                          step={1}
+                          precision={0}
+                          addonAfter="عدد"
+                        />
+                      </Form.Item>
+                      <Button
+                        type="link"
+                        danger
+                        onClick={() => remove(name)}
+                        disabled={fields.length === 1}
+                      >
+                        حذف
+                      </Button>
+                    </Space>
+                  ))}
+                  <Form.Item>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                    >
+                      افزودن رستوران
+                    </Button>
+                  </Form.Item>
+                  <div style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
+                    💡 مجموع تعداد تخصیص‌ها باید برابر با "تعداد آیتم" باشد
+                  </div>
+                </>
+              )}
+            </Form.List>
+          </Form.Item>
+
+          <Form.Item
             name="quantity_display_fa"
             label="نمایش تعداد (quantity_display_fa)"
           >
@@ -575,9 +713,16 @@ const PackageManagement = () => {
                 <Select.Option value={365}>365 روز (یک سال)</Select.Option>
               </Select>
             </Form.Item>
-            <div style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
-              💡 پس از خرید، کاربر {form.getFieldValue('durationDays') || 'X'} روز فرصت دارد تا از این پکیج استفاده کند
-            </div>
+            <Form.Item shouldUpdate={(prevValues, currentValues) => prevValues.durationDays !== currentValues.durationDays}>
+              {({ getFieldValue }) => {
+                const durationDays = getFieldValue('durationDays');
+                return (
+                  <div style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
+                    💡 پس از خرید، کاربر {durationDays ? `${durationDays} روز` : 'بدون محدودیت زمانی'} فرصت دارد تا از این پکیج استفاده کند
+                  </div>
+                );
+              }}
+            </Form.Item>
           </Card>
 
           <Form.Item>
