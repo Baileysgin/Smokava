@@ -31,7 +31,8 @@ jobs:
       - name: Build Vite app
         working-directory: ./admin-panel
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.smokava.com/api' }}
+          NODE_ENV: production
         run: npm run build
 
       - name: Deploy to server
