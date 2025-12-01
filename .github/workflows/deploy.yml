@@ -50,7 +50,7 @@ jobs:
             echo "⚠️ Deployment will continue, but backup is required for safety"
             echo "⚠️ Please check backup script and database connection"
           }
-          
+
       - name: Verify backup was created
         run: |
           echo "🔍 Verifying backup was created..."
