@@ -48,7 +48,7 @@ jobs:
             git fetch origin main && \
             git reset --hard origin/main && \
             git clean -fd && \
-            bash scripts/deploy.sh || exit 1"
+            sudo bash scripts/deploy-safe.sh || exit 1"
 
       - name: Wait for services to start
         run: |
