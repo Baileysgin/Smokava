@@ -29,15 +29,23 @@ jobs:
       - name: Verify SSH connection
         run: |
           echo "🔍 Testing SSH connection..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "echo 'SSH connection successful'" || {
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 ${{ secrets.SSH_HOST }} "echo 'SSH connection successful'" || {
             echo "❌ SSH connection failed"
+            echo "⚠️ This might be due to:"
+            echo "   - Firewall blocking port 22"
+            echo "   - Server not accessible from GitHub Actions"
+            echo "   - SSH service not running"
+            echo "   - Network issues"
+            echo ""
+            echo "💡 You can deploy manually by running on your server:"
+            echo "   cd /opt/smokava && git pull && sudo bash scripts/fix-502-bulletproof.sh"
             exit 1
           }
 
       - name: Create backup before deploy
         run: |
           echo "📦 Creating database backup..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "cd /opt/smokava && bash scripts/db-backup.sh" || {
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 ${{ secrets.SSH_HOST }} "cd /opt/smokava && bash scripts/db-backup.sh" || {
             echo "❌ CRITICAL: Backup failed!"
             echo "⚠️ Deployment will continue, but backup is required for safety"
             echo "⚠️ Please check backup script and database connection"
@@ -46,7 +54,7 @@ jobs:
       - name: Verify backup was created
         run: |
           echo "🔍 Verifying backup was created..."
-          BACKUP_COUNT=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "ls -1 /var/backups/smokava/smokava_backup_*.gz 2>/dev/null | wc -l" || echo "0")
+          BACKUP_COUNT=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 ${{ secrets.SSH_HOST }} "ls -1 /var/backups/smokava/smokava_backup_*.gz 2>/dev/null | wc -l" || echo "0")
           if [ "$BACKUP_COUNT" -eq "0" ]; then
             echo "⚠️ WARNING: No backups found! This may indicate a problem."
           else
@@ -56,13 +64,17 @@ jobs:
       - name: Pull latest code and deploy
         run: |
           echo "🚀 Deploying to server..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
             git fetch origin main && \
             git reset --hard origin/main && \
             git clean -fd && \
-            sudo bash scripts/deploy-safe.sh" || {
+            sudo bash scripts/fix-502-bulletproof.sh" || {
             echo "⚠️ Deployment script failed, but checking if services are running..."
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "cd /opt/smokava && docker compose ps" || exit 1
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 ${{ secrets.SSH_HOST }} "cd /opt/smokava && docker compose ps" || {
+              echo "❌ Cannot connect to server. Please deploy manually:"
+              echo "   cd /opt/smokava && git pull && sudo bash scripts/fix-502-bulletproof.sh"
+              exit 1
+            }
           }
 
       - name: Wait for services to start
@@ -99,7 +111,7 @@ jobs:
       - name: Verify services are running
         run: |
           echo "🔍 Verifying services..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 ${{ secrets.SSH_HOST }} "cd /opt/smokava && \
             (docker-compose ps || docker compose ps) && \
             echo '' && \
             echo '✅ Deployment verification complete'"
