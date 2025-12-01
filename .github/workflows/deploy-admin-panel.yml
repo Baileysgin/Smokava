@@ -13,6 +13,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      deployments: write
+      actions: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,24 +40,41 @@ jobs:
           NODE_ENV: production
         run: npm run build
 
-      - name: Deploy to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
         with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          source: "admin-panel/dist/*"
-          target: "/tmp/smokava-admin-panel-build"
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Move build to production
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
+      - name: Configure SSH target
+        run: |
+          if [ -z "${{ secrets.SERVER_IP }}" ]; then
+            echo "❌ SERVER_IP secret is not set"
+            exit 1
+          fi
+          SSH_USER="${{ secrets.SSH_USER || 'root' }}"
+          SSH_PORT="${{ secrets.SSH_PORT || '22' }}"
+          SSH_TARGET="${SSH_USER}@${{ secrets.SERVER_IP }}"
+          echo "SSH_TARGET=${SSH_TARGET}" >> $GITHUB_ENV
+          echo "SSH_PORT=${SSH_PORT}" >> $GITHUB_ENV
+
+      - name: Deploy to server
+        timeout-minutes: 30
+        run: |
+          # Note: This workflow uses static file deployment
+          # For Docker Compose deployment, use the main deploy.yml workflow instead
+          echo "⚠️  This workflow uses static file deployment"
+          echo "💡 For Docker Compose deployment, use .github/workflows/deploy.yml"
+
+          ssh -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=60 \
+              -o ServerAliveInterval=20 \
+              -o ServerAliveCountMax=10 \
+              -o TCPKeepAlive=yes \
+              -o BatchMode=yes \
+              -p ${{ env.SSH_PORT }} \
+              ${{ env.SSH_TARGET }} \
+              "bash -c '
             # Create directory if it doesn't exist
             sudo mkdir -p /var/www/smokava-admin-panel
 
@@ -75,7 +97,5 @@ jobs:
             # Cleanup
             rm -rf /tmp/smokava-admin-panel-build
 
-            echo "✅ Admin Panel deployed successfully!"
-
-
-
+            echo \"✅ Admin Panel deployed successfully!\"
+              '"
