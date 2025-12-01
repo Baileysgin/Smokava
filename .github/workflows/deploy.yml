@@ -68,11 +68,11 @@ jobs:
             git fetch origin main && \
             git reset --hard origin/main && \
             git clean -fd && \
-            sudo bash scripts/fix-502-bulletproof.sh" || {
+            sudo bash scripts/fix-production-502.sh" || {
             echo "⚠️ Deployment script failed, but checking if services are running..."
             ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=60 ${{ secrets.SSH_HOST }} "cd /opt/smokava && docker compose ps" || {
               echo "❌ Cannot connect to server. Please deploy manually:"
-              echo "   cd /opt/smokava && git pull && sudo bash scripts/fix-502-bulletproof.sh"
+              echo "   cd /opt/smokava && git pull && sudo bash scripts/fix-production-502.sh"
               exit 1
             }
           }
