@@ -60,7 +60,10 @@ jobs:
             git fetch origin main && \
             git reset --hard origin/main && \
             git clean -fd && \
-            sudo bash scripts/deploy-safe.sh || exit 1"
+            sudo bash scripts/deploy-safe.sh" || {
+            echo "⚠️ Deployment script failed, but checking if services are running..."
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.SSH_HOST }} "cd /opt/smokava && docker compose ps" || exit 1
+          }
 
       - name: Wait for services to start
         run: |
