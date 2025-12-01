@@ -85,8 +85,9 @@ export default function ProfilePage() {
     if (!user?._id) return;
 
     try {
-      // Generate invite link or use public profile URL
-      const publicUrl = `${window.location.origin}/u/${user.username || user._id}`;
+      // Generate public profile URL - try username first, fallback to ID
+      const identifier = user.username || user._id;
+      const publicUrl = `${window.location.origin}/u/${identifier}`;
 
       // Try to use Web Share API if available
       if (navigator.share) {
@@ -105,7 +106,8 @@ export default function ProfilePage() {
       // User cancelled share or error occurred
       if (error.name !== 'AbortError') {
         // Fallback to clipboard if share failed
-        const publicUrl = `${window.location.origin}/u/${user.username || user._id}`;
+        const identifier = user.username || user._id;
+        const publicUrl = `${window.location.origin}/u/${identifier}`;
         await navigator.clipboard.writeText(publicUrl);
         setShareCopied(true);
         setTimeout(() => setShareCopied(false), 2000);
@@ -113,12 +115,12 @@ export default function ProfilePage() {
     }
   };
 
-  // Mock data for demonstration - in real app, this would come from API
-  const mockStats = {
-    restaurantsVisited: 8,
-    hookahsSmoked: stats?.totalConsumed || 24,
-    daysActive: 45,
-    diverseFlavors: 12,
+  // Use real stats from API
+  const displayStats = {
+    restaurantsVisited: stats?.restaurantsVisited || 0,
+    hookahsSmoked: stats?.totalConsumed || 0,
+    daysActive: stats?.daysActive || 0,
+    diverseFlavors: stats?.diverseFlavors || 0,
   };
 
   return (
@@ -213,7 +215,7 @@ export default function ProfilePage() {
           }}>
             <div className="absolute top-0 right-0 w-16 h-16 bg-accent-500/5 rounded-full blur-2xl"></div>
             <MapPin className="w-6 h-6 text-accent-400 mb-2 relative z-10" strokeWidth={2.5} />
-            <p className="text-3xl font-bold text-white mb-1 relative z-10">{mockStats.restaurantsVisited}</p>
+            <p className="text-3xl font-bold text-white mb-1 relative z-10">{displayStats.restaurantsVisited}</p>
             <p className="text-xs text-gray-400 relative z-10">رستوران بازدید</p>
           </div>
           <div className="bg-gradient-to-br from-dark-100 to-dark-200 border border-accent-500/30 rounded-2xl p-4 backdrop-blur-xl relative overflow-hidden" style={{
@@ -221,7 +223,7 @@ export default function ProfilePage() {
           }}>
             <div className="absolute top-0 right-0 w-16 h-16 bg-accent-500/5 rounded-full blur-2xl"></div>
             <Cigarette className="w-6 h-6 text-accent-400 mb-2 relative z-10" strokeWidth={2.5} />
-            <p className="text-3xl font-bold text-white mb-1 relative z-10">{mockStats.hookahsSmoked}</p>
+            <p className="text-3xl font-bold text-white mb-1 relative z-10">{displayStats.hookahsSmoked}</p>
             <p className="text-xs text-gray-400 relative z-10">قلیان کشیده</p>
           </div>
           <button
@@ -251,7 +253,7 @@ export default function ProfilePage() {
           }}>
             <div className="absolute top-0 right-0 w-16 h-16 bg-accent-500/5 rounded-full blur-2xl"></div>
             <Calendar className="w-6 h-6 text-accent-400 mb-2 relative z-10" strokeWidth={2.5} />
-            <p className="text-3xl font-bold text-white mb-1 relative z-10">{mockStats.daysActive}</p>
+            <p className="text-3xl font-bold text-white mb-1 relative z-10">{displayStats.daysActive}</p>
             <p className="text-xs text-gray-400 relative z-10">روز فعالیت</p>
           </div>
           <div className="bg-gradient-to-br from-dark-100 to-dark-200 border border-accent-500/30 rounded-2xl p-4 backdrop-blur-xl relative overflow-hidden" style={{
@@ -259,7 +261,7 @@ export default function ProfilePage() {
           }}>
             <div className="absolute top-0 right-0 w-16 h-16 bg-accent-500/5 rounded-full blur-2xl"></div>
             <Star className="w-6 h-6 text-accent-400 mb-2 relative z-10" strokeWidth={2.5} />
-            <p className="text-3xl font-bold text-white mb-1 relative z-10">{mockStats.diverseFlavors}</p>
+            <p className="text-3xl font-bold text-white mb-1 relative z-10">{displayStats.diverseFlavors}</p>
             <p className="text-xs text-gray-400 relative z-10">طعم متنوع</p>
           </div>
         </div>

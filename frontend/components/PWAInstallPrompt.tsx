@@ -72,7 +72,7 @@ export default function PWAInstallPrompt() {
               نصب اپلیکیشن اسموکاوا
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-              برای دسترسی سریع‌تر، اپلیکیشن را به صفحه اصلی خود اضافه کنید
+              برای دسترسی سریع‌تر، اپ را به صفحه اصلی اضافه کن.
             </p>
             <div className="flex gap-2">
               <button

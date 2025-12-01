@@ -72,10 +72,7 @@ export default function AddToHomePrompt() {
       <div className="bg-gradient-to-r from-accent-500 to-accent-600 rounded-lg shadow-lg p-4 flex items-center gap-3">
         <div className="flex-1">
           <p className="text-white font-medium text-sm">
-            اپلیکیشن را به صفحه اصلی اضافه کنید
-          </p>
-          <p className="text-white/80 text-xs mt-1">
-            برای دسترسی سریع‌تر
+            برای دسترسی سریع‌تر، اپ را به صفحه اصلی اضافه کن.
           </p>
         </div>
         <div className="flex gap-2">

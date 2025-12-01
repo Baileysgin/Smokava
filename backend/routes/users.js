@@ -404,16 +404,26 @@ router.post('/contacts', auth, async (req, res) => {
 router.get('/:id/public', async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id)
-      .select('firstName lastName username photoUrl bio createdAt');
+    // Try to find by username first, then by ID
+    let user = await User.findOne({ username: id })
+      .select('firstName lastName username photoUrl bio createdAt _id');
+    
+    if (!user) {
+      // Fallback to ID lookup
+      user = await User.findById(id)
+        .select('firstName lastName username photoUrl bio createdAt _id');
+    }
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Use user._id for all queries (works for both username and ID lookups)
+    const userId = user._id;
+
     // Get public posts only
     const posts = await Post.find({
-      user: id,
+      user: userId,
       deletedAt: null,
       published: true
     })
@@ -423,7 +433,7 @@ router.get('/:id/public', async (req, res) => {
       .select('caption imageUrl restaurant flavor createdAt likes');
 
     // Get stats from history (authoritative source)
-    const userPackages = await UserPackage.find({ user: id });
+    const userPackages = await UserPackage.find({ user: userId });
     let totalConsumed = 0;
     const restaurantsVisited = new Set();
 
@@ -443,7 +453,7 @@ router.get('/:id/public', async (req, res) => {
     });
 
     const postsCount = await Post.countDocuments({
-      user: id,
+      user: userId,
       deletedAt: null,
       published: true
     });
