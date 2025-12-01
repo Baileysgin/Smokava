@@ -101,25 +101,33 @@ if ! docker volume ls | grep -q "smokava_mongodb_data\|mongodb_data"; then
     fi
 fi
 
-# Step 7: Start/restart services (without removing volumes)
+# Step 7: Stop existing containers (if running) before recreating
+log "Step 7: Stopping existing containers (if any)..."
+$DOCKER_COMPOSE_CMD stop backend frontend admin-panel 2>/dev/null || true
+
+# Step 8: Remove old containers (but NOT volumes!)
+log "Step 8: Removing old containers (preserving volumes)..."
+$DOCKER_COMPOSE_CMD rm -f backend frontend admin-panel 2>/dev/null || true
+
+# Step 9: Start/restart services (without removing volumes)
 # CRITICAL: Never use 'docker compose down' or 'down -v' - it removes volumes!
-log "Step 7: Starting services (preserving volumes)..."
+log "Step 9: Starting services (preserving volumes)..."
 $DOCKER_COMPOSE_CMD up -d --no-deps --build backend frontend admin-panel || error "Failed to start services"
 
-# Step 8: Wait for services to be healthy
-log "Step 8: Waiting for services to be healthy..."
+# Step 10: Wait for services to be healthy
+log "Step 10: Waiting for services to be healthy..."
 sleep 10
 
-# Step 9: Post-deploy health check
-log "Step 9: Running post-deploy health check..."
+# Step 11: Post-deploy health check
+log "Step 11: Running post-deploy health check..."
 if [ -f "$PROJECT_DIR/scripts/pre-deploy-health-check.sh" ]; then
     bash "$PROJECT_DIR/scripts/pre-deploy-health-check.sh" || warn "Post-deploy health check failed"
 else
     warn "Health check script not found, skipping"
 fi
 
-# Step 10: Verify database is intact
-log "Step 10: Verifying database integrity..."
+# Step 12: Verify database is intact
+log "Step 12: Verifying database integrity..."
 MONGODB_CONTAINER=$($DOCKER_COMPOSE_CMD ps -q mongodb 2>/dev/null || echo "")
 if [ -n "$MONGODB_CONTAINER" ]; then
     USER_COUNT=$(docker exec "$MONGODB_CONTAINER" mongosh --quiet --eval "db.users.countDocuments()" smokava 2>/dev/null || echo "0")
