@@ -63,7 +63,12 @@ const UserDetailsPage = () => {
   const handleRoleUpdate = async (values: { role: string; assignedRestaurant?: string }) => {
     if (!id) return;
     try {
-      await adminService.updateUserRole(id, values.role, values.assignedRestaurant);
+      // Clear assignedRestaurant if role is not restaurant_operator
+      const updateData = {
+        role: values.role,
+        assignedRestaurant: values.role === 'restaurant_operator' ? values.assignedRestaurant : undefined,
+      };
+      await adminService.updateUserRole(id, updateData.role, updateData.assignedRestaurant);
       message.success('نقش کاربر با موفقیت به‌روزرسانی شد');
       setRoleModalVisible(false);
       loadUserDetails();
