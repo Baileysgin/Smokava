@@ -47,7 +47,7 @@ After adding both secrets:
 ## ✅ Checklist
 
 - [ ] SSH_PRIVATE_KEY added to GitHub
-- [ ] SSH_HOST added to GitHub  
+- [ ] SSH_HOST added to GitHub
 - [ ] Public key added to server
 - [ ] Re-run the failed workflow
 

@@ -32,4 +32,3 @@ const followRequestSchema = new mongoose.Schema({
 followRequestSchema.index({ requesterId: 1, targetUserId: 1, status: 1 }, { unique: true, partialFilterExpression: { status: 'pending' } });
 
 module.exports = mongoose.model('FollowRequest', followRequestSchema);
-

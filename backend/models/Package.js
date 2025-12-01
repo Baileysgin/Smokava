@@ -52,6 +52,14 @@ const packageSchema = new mongoose.Schema({
     default: ''
   },
   // Time-based activation fields
+  startDate: {
+    type: Date,
+    default: null
+  },
+  endDate: {
+    type: Date,
+    default: null
+  },
   timeWindows: [{
     start: {
       type: String, // Format: "HH:mm" (e.g., "13:00")

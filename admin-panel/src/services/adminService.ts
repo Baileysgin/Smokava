@@ -73,6 +73,26 @@ export const adminService = {
     return response.data;
   },
 
+  // New role management endpoints
+  assignRole: async (userId: string, roleName: string, restaurantId?: string): Promise<any> => {
+    const response = await api.post(`/admin/users/${userId}/roles`, {
+      roleNames: [roleName],
+      restaurantId,
+    });
+    return response.data;
+  },
+
+  revokeRole: async (userId: string, roleName: string, restaurantId?: string): Promise<any> => {
+    const params = restaurantId ? { restaurantId } : {};
+    await api.delete(`/admin/users/${userId}/roles/${roleName}`, { params });
+    return { message: 'Role revoked successfully' };
+  },
+
+  getUserRoles: async (userId: string): Promise<any> => {
+    const response = await api.get(`/admin/users/${userId}/roles`);
+    return response.data;
+  },
+
   // Package Management
   getPackage: async (): Promise<any> => {
     const response = await api.get('/admin/package');

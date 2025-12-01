@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, User, MapPin, Cigarette, Calendar, Star, Award, Trophy, Target, Users, UserCheck, X, LogOut, Edit } from 'lucide-react';
+import { Settings, User, MapPin, Cigarette, Calendar, Star, Award, Trophy, Target, Users, UserCheck, X, LogOut, Edit, Share2, Copy, Check } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import BottomNav from '@/components/BottomNav';
@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -80,6 +81,38 @@ export default function ProfilePage() {
     router.push('/auth');
   };
 
+  const handleShareProfile = async () => {
+    if (!user?._id) return;
+
+    try {
+      // Generate invite link or use public profile URL
+      const publicUrl = `${window.location.origin}/u/${user.username || user._id}`;
+
+      // Try to use Web Share API if available
+      if (navigator.share) {
+        await navigator.share({
+          title: `پروفایل ${user.firstName || user.name || 'کاربر'} در اسموکاوا`,
+          text: `پروفایل ${user.firstName || user.name || 'کاربر'} را در اسموکاوا ببینید`,
+          url: publicUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(publicUrl);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    } catch (error: any) {
+      // User cancelled share or error occurred
+      if (error.name !== 'AbortError') {
+        // Fallback to clipboard if share failed
+        const publicUrl = `${window.location.origin}/u/${user.username || user._id}`;
+        await navigator.clipboard.writeText(publicUrl);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    }
+  };
+
   // Mock data for demonstration - in real app, this would come from API
   const mockStats = {
     restaurantsVisited: 8,
@@ -129,13 +162,31 @@ export default function ProfilePage() {
                   <span className="text-sm text-gray-300">عاشق قلیان و فضاهای سنتی ایرانی</span>
                 </div>
               )}
-              <button
-                onClick={() => router.push('/profile/edit')}
-                className="flex items-center gap-2 bg-accent-500/20 hover:bg-accent-500/30 text-accent-400 border border-accent-500/30 rounded-xl px-4 py-2 transition-all duration-200"
-              >
-                <Edit className="w-4 h-4" />
-                <span className="text-sm font-semibold">ویرایش پروفایل</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push('/profile/edit')}
+                  className="flex items-center gap-2 bg-accent-500/20 hover:bg-accent-500/30 text-accent-400 border border-accent-500/30 rounded-xl px-4 py-2 transition-all duration-200"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="text-sm font-semibold">ویرایش پروفایل</span>
+                </button>
+                <button
+                  onClick={handleShareProfile}
+                  className="flex items-center gap-2 bg-accent-500/20 hover:bg-accent-500/30 text-accent-400 border border-accent-500/30 rounded-xl px-4 py-2 transition-all duration-200"
+                >
+                  {shareCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span className="text-sm font-semibold">کپی شد!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm font-semibold">اشتراک‌گذاری</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             <div className="w-20 h-20 rounded-full border-2 border-accent-500 overflow-hidden flex-shrink-0 relative" style={{
               boxShadow: '0 4px 20px rgba(255, 107, 53, 0.4)'

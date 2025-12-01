@@ -35,4 +35,3 @@ const userRoleSchema = new mongoose.Schema({
 userRoleSchema.index({ userId: 1, roleId: 1, 'scope.restaurantId': 1 }, { unique: true });
 
 module.exports = mongoose.model('UserRole', userRoleSchema);
-

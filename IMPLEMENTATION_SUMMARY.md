@@ -1,262 +1,186 @@
-# Smokava Full Feature Implementation Summary
+# Implementation Summary - Smokava Feature Updates
 
-## Overview
+This document summarizes all changes made to implement the requested features and fixes.
 
-This document summarizes all features implemented for Smokava, including role system, admin moderation, public profiles, PWA support, time-based packages, and safe deployment practices.
+## Completed Features
 
-## ✅ Completed Features
+### 1. Role Management System ✅
+- **Status**: Backend already implemented, admin UI updated
+- **Changes**:
+  - Added role assignment/revoke endpoints in admin service
+  - UserRole model already exists with scope support
+  - Admin UI can now assign/revoke roles with restaurant scope for operators
+- **Files Modified**:
+  - `admin-panel/src/services/adminService.ts` - Added role management methods
+  - `backend/routes/admin.js` - Role endpoints already exist
 
-### A - Authorization & Roles
+### 2. Moderation System ✅
+- **Status**: Fully implemented
+- **Changes**:
+  - Post and comment moderation endpoints exist
+  - ModerationLog model tracks all actions
+  - Admin UI has moderation page with hide/unhide/delete
+- **Files**: Already complete
 
-**Status**: ✅ Complete
+### 3. Public Profile & Follow System ✅
+- **Status**: Fully implemented
+- **Changes**:
+  - Public profile endpoint: `/api/users/:id/public`
+  - Follow/unfollow endpoints exist
+  - Follow requests for private profiles
+  - Invite link generation endpoint exists
+- **Files**: Already complete
 
-- **Models**: `Role`, `UserRole` models exist with proper schema
-- **Default Behavior**: All accounts default to 'user' role
-- **API Endpoints**:
-  - `POST /admin/users/:id/roles` - Assign role(s) (admin-only)
-  - `DELETE /admin/users/:id/roles/:role` - Revoke role
-  - `GET /admin/users/:id/roles` - List roles
-- **Middleware**: `backend/middleware/role.js` with `isAdmin`, `isOperator`, `isAdminOrOperator` helpers
-- **Backward Compatibility**: Legacy `user.role` field maintained for compatibility
+### 4. PWA Support ✅
+- **Status**: Implemented
+- **Changes**:
+  - Manifest.json exists
+  - Service worker exists
+  - AddToHomePrompt component updated to save dismissed state
+- **Files Modified**:
+  - `frontend/components/AddToHomePrompt.tsx` - Updated to persist dismissed state
 
-### B - Admin Moderation for Posts & Comments
+### 5. Time-Windowed Packages ✅
+- **Status**: Backend implemented, error messages fixed
+- **Changes**:
+  - Time window validation exists in package redemption
+  - Error messages changed to Persian: "این بسته در این ساعت فعال نیست"
+  - Remaining time endpoint exists
+- **Files Modified**:
+  - `backend/routes/packages.js` - Fixed error messages to Persian
 
-**Status**: ✅ Complete
+### 6. Counter Fixes ✅
+- **Status**: Fixed
+- **Changes**:
+  - Restaurant count and shisha usage now calculated from authoritative history logs
+  - Fallback to remainingCount calculation if no history exists
+- **Files Modified**:
+  - `backend/routes/users.js` - Fixed stats calculation
+  - `backend/routes/admin.js` - Fixed user details stats calculation
 
-- **Backend Endpoints**:
-  - `GET /admin/posts` - List posts with pagination and filters
-  - `GET /admin/posts/:id` - Get post with comments
-  - `DELETE /admin/posts/:id` - Soft-delete post
-  - `PATCH /admin/posts/:id` - Toggle published/hidden
-  - `DELETE /admin/posts/:postId/comments/:commentId` - Delete comment
-- **Admin UI**: Full moderation interface at `/moderation` in admin panel
-- **Audit Log**: `ModerationLog` model tracks all actions with adminId, reason, metadata
-- **Soft Deletes**: Posts and comments use `deletedAt` field, not removed from DB
+### 7. Health Check Endpoints ✅
+- **Status**: Implemented
+- **Changes**:
+  - `/api/health` endpoint exists
+  - `/api/admin/health` endpoint added
+  - Both check database connection and backup status
+- **Files Modified**:
+  - `backend/routes/admin.js` - Added admin health endpoint
 
-### C - Profile Sharing / Invite & Follow Flow
+### 8. Database Persistence & Backups ✅
+- **Status**: Implemented
+- **Changes**:
+  - Docker named volume already configured (`mongodb_data`)
+  - Backup script exists and updated
+  - Restore script created
+  - Safe deployment script created
+- **Files Created**:
+  - `scripts/deploy-safe.sh` - Safe deployment with backup
+  - `scripts/pre-deploy-health-check.sh` - Health check before deploy
+  - `scripts/restore-database.sh` - Database restore script
+  - `DEPLOY_FINANCE.md` - Deployment guide
+  - `BACKUP_RESTORE.md` - Backup/restore guide
 
-**Status**: ✅ Complete
+## Files Changed
 
-- **Public Profile**:
-  - Route: `/user/:userId` (already exists)
-  - Endpoint: `GET /users/:id/public` - Returns public data without sensitive fields
-- **Sharing & Invites**:
-  - Endpoint: `POST /users/:id/invite` - Generate invite link with JWT token (expires in 7 days)
-  - Share button can be added to profile UI
-- **Follow System**:
-  - Endpoints: `POST /follow/:userId`, `DELETE /follow/:userId`
-  - `GET /users/:id/followers`, `GET /users/:id/following`
-  - Private profiles: Follow requests stored in `follow_requests` collection
-  - Public profiles: Direct follow
+### Backend
+1. `backend/routes/packages.js` - Fixed time window error messages to Persian
+2. `backend/routes/users.js` - Fixed counter calculations from history
+3. `backend/routes/admin.js` - Fixed counter calculations, added health endpoint
 
-### D - PWA Add-to-Home Popup
+### Frontend
+1. `frontend/components/AddToHomePrompt.tsx` - Updated to save dismissed state
 
-**Status**: ✅ Complete
+### Admin Panel
+1. `admin-panel/src/services/adminService.ts` - Added role management methods
 
-- **Manifest**: `frontend/public/manifest.json` with icons, theme colors
-- **Service Worker**: `frontend/public/sw.js` for lightweight caching
-- **Registration**: `frontend/lib/pwa.ts` registers service worker
-- **Popup Component**: `frontend/components/AddToHomePrompt.tsx`
-  - Listens to `beforeinstallprompt` event
-  - Shows custom popup asking to add to home screen
-  - Stores dismissal preference in `localStorage`
-  - Only shows once or when user preference allows
+### Scripts
+1. `scripts/deploy-safe.sh` - Created safe deployment script
+2. `scripts/pre-deploy-health-check.sh` - Created health check script
+3. `scripts/restore-database.sh` - Created restore script
 
-### E - Time-Based Package Activation & Expiry (Iran Time)
+### Documentation
+1. `DEPLOY_FINANCE.md` - Deployment guide
+2. `BACKUP_RESTORE.md` - Backup/restore guide
+3. `env.example` - Updated with backup/deployment variables
 
-**Status**: ✅ Complete
+## Pending Items (Optional Enhancements)
 
-- **DB Schema**: `UserPackage` model already has:
-  - `startDate`, `endDate` fields
-  - `timeWindows` array with `{start, end, timezone}` format
-  - `isGift` flag
-- **Backend Logic**:
-  - Time-window validation in `packages.js` using `moment-timezone` with `Asia/Tehran`
-  - Validates current time against windows AND date range
-  - Returns `403` with reason "outside allowed timeframe" if outside window
-  - Endpoint: `GET /wallet/:userId/packages/:id/remaining-time`
-    - Returns: remaining tokens, nextAvailableWindowUntil, windowStatus, textual summary
-- **Frontend Wallet**:
-  - `PackageTimeInfo` component added to wallet page
-  - Shows per-package remaining tokens and active windows
-  - Displays countdown until window opens/closes (Iran TZ)
-  - Shows status: available, waiting, expired, not_started
+### 1. Admin UI for Package Time Windows
+- **Status**: Not implemented
+- **Note**: Backend supports time windows, but admin UI doesn't have form fields yet
+- **Recommendation**: Add time window fields to PackageManagement.tsx
 
-### F - Debug & Fix Restaurants & "قلیون" Usage Counters
+### 2. Public Profile Sharing UI
+- **Status**: Not implemented
+- **Note**: Backend endpoint exists, but frontend doesn't have share button
+- **Recommendation**: Add share button to profile page
 
-**Status**: ✅ Complete
-
-- **Counter Calculation**:
-  - Counters are derived from redemption logs (not cached fields)
-  - `GET /users/stats` calculates:
-    - `restaurantsVisited` from `UserPackage.history` (unique restaurant IDs)
-    - `totalConsumed` from `totalCount - remainingCount` across all packages
-  - Counters computed on-the-fly, ensuring accuracy
-- **Rebuild Endpoint**: `POST /admin/rebuild-counters` - Rebuilds counters from logs
-- **Script**: `scripts/rebuild-counters.sh` available for manual repair
-
-### G - Persist DB with Docker Volume + Hourly Backups + Safe CI/CD
-
-**Status**: ✅ Complete
-
-- **Docker Volume**:
-  - `docker-compose.yml` defines named volume `mongodb_data` for MongoDB
-  - Volume persists data even if containers are recreated
-- **Backups**:
-  - Script: `scripts/db-backup.sh`
-    - Runs `mongodump` with compression
-    - Stores to `/var/backups/smokava/` with timestamped filenames
-    - Rotates backups (keeps last 168 = 7 days of hourly backups)
-    - Updates `last_backup.txt` timestamp file
-  - Health check endpoint reports last backup: `GET /api/health`
-  - Cron job setup instructions in `DOCS/DEPLOY.md`
-- **CI/CD Safety**:
-  - GitHub Actions workflow: `.github/workflows/deploy.yml`
-    - **Never** runs destructive DB commands
-    - Takes backup before deploying
-    - Uses `docker-compose up -d --no-deps --build` to avoid dropping volumes
-    - Runs health checks and smoke tests after deploy
-  - Backup workflow: `.github/workflows/backup.yml` for manual backups
-
-### H - Tests & Validation
-
-**Status**: ⚠️ Partially Complete
-
-- **Unit Tests**: Structure ready, tests can be added:
-  - Role assignment endpoints
-  - Admin posts/comments delete
-  - OTP send/verify (mock Kavenegar)
-  - Time-window validation logic (Iran timezone)
-  - Backup script validation
-- **E2E Smoke Tests**: Included in CI/CD workflow
-  - Health check: `GET /api/health`
-  - Admin users list: `GET /api/admin/users?page=1&limit=1`
-
-### I - Deliverables & Output
-
-**Status**: ✅ Complete
-
-#### Code Changes
-
-- **Backend**:
-  - `middleware/role.js` - Role-based middleware helpers
-  - `routes/admin.js` - Already has role assignment and moderation endpoints
-  - `routes/packages.js` - Time-window validation and remaining-time endpoint
-  - `routes/users.js` - Public profile, invite, follow endpoints
-  - Models: `Role`, `UserRole`, `ModerationLog`, `FollowRequest` (all exist)
-
-- **Admin Panel**:
-  - `pages/Moderation.tsx` - Full moderation UI for posts/comments
-  - `pages/Users.tsx` - User management with role assignment
-  - `pages/ActivatePackage.tsx` - Package activation with time windows
-
-- **Frontend**:
-  - `components/AddToHomePrompt.tsx` - PWA install popup
-  - `components/PWAInit.tsx` - PWA initialization
-  - `app/wallet/page.tsx` - Updated with `PackageTimeInfo` component
-  - `public/sw.js` - Service worker for caching
-  - `public/manifest.json` - PWA manifest
-
-- **Scripts**:
-  - `scripts/db-backup.sh` - Automated backup with rotation
-  - `scripts/rebuild-counters.sh` - Rebuild user counters
-
-- **Docker**:
-  - `docker-compose.yml` - Named volume `mongodb_data` for persistence
-
-- **CI/CD**:
-  - `.github/workflows/deploy.yml` - Safe deployment workflow
-  - `.github/workflows/backup.yml` - Manual backup workflow
-
-#### Documentation
-
-- **DOCS/DEPLOY.md** - Updated with:
-  - Safe deploy steps
-  - DB volume persistence
-  - Backup and restore procedures
-  - CI/CD integration
-  - Rollback procedures
-
-- **DOCS/ENV.md** - Updated with:
-  - All required env vars
-  - Timezone (TZ=Asia/Tehran)
-  - Backup path configuration
-  - Production setup examples
-
-- **DOCS/ADMIN.md** - Updated with:
-  - Role assignment guide
-  - Moderation UI usage
-  - Time-based package management
-  - Public profile sharing
-  - Follow system
-
-## Database Migrations
-
-No destructive migrations required. All schema changes are backward-compatible:
-
-1. **Role System**: Uses existing `User.role` field + new `Role`/`UserRole` collections
-2. **Moderation**: Uses existing `Post.deletedAt`, `Post.published` fields
-3. **Time Windows**: Uses existing `UserPackage.startDate`, `endDate`, `timeWindows` fields
-4. **Follow System**: Uses existing `User.following`, `User.followers` arrays
+### 3. Admin Panel API URL Fix
+- **Status**: Already correct
+- **Note**: Admin panel uses VITE_API_URL which is correct
 
 ## Testing Checklist
 
-- [x] Role assignment endpoints work
-- [x] Admin moderation UI displays posts/comments
-- [x] Public profile endpoint returns correct data
-- [x] Follow system works for public/private profiles
-- [x] PWA popup appears and can be dismissed
-- [x] Service worker registers successfully
-- [x] Time-window validation works in Iran timezone
-- [x] Remaining-time endpoint returns correct data
-- [x] Wallet UI shows time information
-- [x] Counters calculated from redemption logs
-- [x] Backup script creates and rotates backups
-- [x] Docker volume persists data
-- [x] CI/CD workflow deploys safely
+- [ ] Test role assignment/revoke in admin panel
+- [ ] Test moderation (hide/unhide/delete posts and comments)
+- [ ] Test public profile access
+- [ ] Test follow/unfollow flow
+- [ ] Test PWA install prompt
+- [ ] Test package time window validation (Asia/Tehran)
+- [ ] Test counter calculations (restaurant count, shisha usage)
+- [ ] Test health check endpoints
+- [ ] Test backup script
+- [ ] Test restore script
+- [ ] Test safe deployment script
 
-## Deployment Verification
+## Migration Notes
 
-After deployment, verify:
+No database migrations required - all changes are backward compatible:
+- Role system uses existing UserRole model
+- Moderation uses existing ModerationLog model
+- Time windows use existing UserPackage fields
+- Counters now use existing history data
 
-1. **Admin Panel**:
-   - Login works
-   - Users list shows data
-   - Packages list shows data
-   - Moderation page shows posts/comments
+## Deployment Instructions
 
-2. **Time-Based Packages**:
-   - Create package with time windows
-   - Activate for user
-   - Verify time-window validation works
-   - Check wallet shows remaining time
+1. **Backup database**:
+   ```bash
+   bash scripts/db-backup.sh
+   ```
 
-3. **PWA**:
-   - Manifest loads correctly
-   - Service worker registers
-   - Add-to-home popup appears (once)
+2. **Run health check**:
+   ```bash
+   bash scripts/pre-deploy-health-check.sh
+   ```
 
-4. **Backups**:
-   - Backup script runs successfully
-   - Backups stored in `/var/backups/smokava/`
-   - Health endpoint shows last backup timestamp
+3. **Deploy safely**:
+   ```bash
+   sudo bash scripts/deploy-safe.sh
+   ```
 
-5. **Database**:
-   - Volume persists after container restart
-   - No data loss on deploy
+4. **Verify**:
+   ```bash
+   curl https://api.smokava.com/api/health
+   curl -H "Authorization: Bearer TOKEN" https://api.smokava.com/api/admin/health
+   ```
 
-## Next Steps
+## Environment Variables Added
 
-1. **Add Unit Tests**: Create test files for critical endpoints
-2. **Monitor Backups**: Verify hourly backups are running
-3. **Test Time Windows**: Verify Iran timezone handling in production
-4. **User Testing**: Test PWA install flow on mobile devices
-5. **Performance**: Monitor API response times after deployment
+Add to `.env`:
+```bash
+BACKUP_PATH=/var/backups/smokava
+RETENTION_DAYS=7
+RETENTION_HOURS=168
+PROJECT_DIR=/opt/smokava
+LOG_FILE=/var/log/smokava-deploy.log
+HEALTH_CHECK_TIMEOUT=10
+```
 
 ## Notes
 
-- All changes are production-ready and backward-compatible
-- No breaking changes to existing APIs
-- Database migrations are non-destructive
-- CI/CD workflow ensures safe deployments
-- Backups run automatically (hourly) and manually (via workflow)
+- All changes are backward compatible
+- No data migration required
+- Existing functionality preserved
+- Safe deployment ensures database persistence
+- Backup system ensures data recovery capability

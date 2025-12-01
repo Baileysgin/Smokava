@@ -72,4 +72,3 @@ If `git pull` works without asking for credentials, you're all set! ✅
 **"fatal: could not read Username"**
 - Credential helper not configured
 - Run: `git config --global credential.helper store`
-

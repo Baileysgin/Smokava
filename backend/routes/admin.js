@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Admin = require('../models/Admin');
 const Restaurant = require('../models/Restaurant');
 const User = require('../models/User');
@@ -434,18 +435,23 @@ router.get('/users/:id', auth, requireAdmin, async (req, res) => {
       .populate('restaurant', 'nameFa addressFa')
       .sort({ createdAt: -1 });
 
-    // Calculate stats
-    const totalConsumed = userPackages.reduce((sum, pkg) => {
-      return sum + (pkg.totalCount - pkg.remainingCount);
-    }, 0);
-
+    // Calculate stats from history (authoritative source)
+    let totalConsumed = 0;
     const restaurantsVisited = new Set();
+
     userPackages.forEach(pkg => {
-      pkg.history.forEach(item => {
-        if (item.restaurant) {
-          restaurantsVisited.add(item.restaurant._id.toString());
-        }
-      });
+      if (pkg.history && pkg.history.length > 0) {
+        // Use history as authoritative source
+        pkg.history.forEach(item => {
+          totalConsumed += (item.count || 1);
+          if (item.restaurant) {
+            restaurantsVisited.add(item.restaurant._id.toString());
+          }
+        });
+      } else {
+        // Fallback to remainingCount calculation if no history
+        totalConsumed += (pkg.totalCount - pkg.remainingCount);
+      }
     });
 
     res.json({
@@ -659,6 +665,9 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
       feature_validity_fa,
       feature_support_fa,
       package_icon,
+      startDate,
+      endDate,
+      timeWindows,
     } = req.body;
 
     // Find the package by ID or create a new one
@@ -724,6 +733,18 @@ router.post('/update-package', auth, requireAdmin, async (req, res) => {
 
     if (package_icon !== undefined) {
       package.package_icon = package_icon;
+    }
+
+    // Update time window fields (these are stored in UserPackage, not Package)
+    // But we can store them in Package model for reference
+    if (startDate !== undefined) {
+      package.startDate = startDate ? new Date(startDate) : null;
+    }
+    if (endDate !== undefined) {
+      package.endDate = endDate ? new Date(endDate) : null;
+    }
+    if (timeWindows !== undefined) {
+      package.timeWindows = timeWindows || [];
     }
 
     await package.save();
@@ -1308,18 +1329,22 @@ router.post('/rebuild-counters', auth, requireAdmin, async (req, res) => {
     for (const user of users) {
       const userPackages = await UserPackage.find({ user: user._id });
 
-      // Calculate restaurants visited from history
+      // Calculate restaurants visited from history (authoritative source)
       const restaurantsVisited = new Set();
       let totalConsumed = 0;
 
       userPackages.forEach(pkg => {
-        totalConsumed += (pkg.totalCount - pkg.remainingCount);
+        // Calculate consumed from history (authoritative)
         if (pkg.history && pkg.history.length > 0) {
           pkg.history.forEach(item => {
+            totalConsumed += (item.count || 1);
             if (item.restaurant) {
               restaurantsVisited.add(item.restaurant.toString());
             }
           });
+        } else {
+          // Fallback to remainingCount calculation if no history
+          totalConsumed += (pkg.totalCount - pkg.remainingCount);
         }
       });
 
@@ -1335,6 +1360,58 @@ router.post('/rebuild-counters', auth, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Rebuild counters error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Health check endpoint for admin
+router.get('/health', auth, requireAdmin, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+
+    let lastBackup = null;
+    const backupPath = process.env.BACKUP_PATH || '/var/backups/smokava';
+    const lastBackupFile = path.join(backupPath, 'last_backup.txt');
+
+    try {
+      if (fs.existsSync(lastBackupFile)) {
+        const timestamp = fs.readFileSync(lastBackupFile, 'utf8').trim();
+        lastBackup = timestamp;
+      }
+    } catch (error) {
+      // Ignore errors reading backup file
+    }
+
+    // Check database connection
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+
+    // Check if we can query users and packages
+    let usersCount = 0;
+    let packagesCount = 0;
+    try {
+      usersCount = await User.countDocuments();
+      packagesCount = await Package.countDocuments();
+    } catch (error) {
+      // Database query failed
+    }
+
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      lastBackup: lastBackup,
+      dataAccess: {
+        usersCount,
+        packagesCount,
+        accessible: dbStatus === 'connected' && usersCount >= 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

@@ -64,7 +64,7 @@ else
     fi
 
     log "Connecting to MongoDB at $HOST:$PORT"
-    
+
     # Try to use docker exec if MongoDB is in a container
     if [ "$HOST" = "mongodb" ] || [ "$HOST" = "localhost" ] || [ "$HOST" = "127.0.0.1" ]; then
         # Find MongoDB container name

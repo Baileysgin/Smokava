@@ -51,4 +51,3 @@ If you prefer to add manually:
 ## ✅ That's it!
 
 After adding secrets, the deployment will work automatically!
-

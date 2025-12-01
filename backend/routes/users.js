@@ -27,16 +27,17 @@ router.put('/profile', auth, async (req, res) => {
 router.get('/stats', auth, async (req, res) => {
   try {
     const userPackages = await UserPackage.find({ user: req.user._id });
-    const totalConsumed = userPackages.reduce((sum, pkg) => {
-      return sum + (pkg.totalCount - pkg.remainingCount);
-    }, 0);
 
-    // Calculate restaurants visited from history
+    // Calculate total consumed from history (authoritative source)
+    let totalConsumed = 0;
     const restaurantsVisited = new Set();
     const flavors = new Set();
+
     userPackages.forEach(pkg => {
       if (pkg.history && pkg.history.length > 0) {
+        // Use history as authoritative source
         pkg.history.forEach(item => {
+          totalConsumed += (item.count || 1);
           if (item.restaurant) {
             restaurantsVisited.add(item.restaurant.toString());
           }
@@ -44,6 +45,9 @@ router.get('/stats', auth, async (req, res) => {
             flavors.add(item.flavor);
           }
         });
+      } else {
+        // Fallback to remainingCount calculation if no history
+        totalConsumed += (pkg.totalCount - pkg.remainingCount);
       }
     });
 
@@ -418,20 +422,23 @@ router.get('/:id/public', async (req, res) => {
       .limit(20)
       .select('caption imageUrl restaurant flavor createdAt likes');
 
-    // Get stats
+    // Get stats from history (authoritative source)
     const userPackages = await UserPackage.find({ user: id });
-    const totalConsumed = userPackages.reduce((sum, pkg) => {
-      return sum + (pkg.totalCount - pkg.remainingCount);
-    }, 0);
-
+    let totalConsumed = 0;
     const restaurantsVisited = new Set();
+
     userPackages.forEach(pkg => {
       if (pkg.history && pkg.history.length > 0) {
+        // Use history as authoritative source
         pkg.history.forEach(item => {
+          totalConsumed += (item.count || 1);
           if (item.restaurant) {
             restaurantsVisited.add(item.restaurant.toString());
           }
         });
+      } else {
+        // Fallback to remainingCount calculation if no history
+        totalConsumed += (pkg.totalCount - pkg.remainingCount);
       }
     });
 

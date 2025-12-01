@@ -48,8 +48,10 @@ export default function AddToHomePrompt() {
 
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
+      localStorage.setItem('pwa-install-dismissed', 'true');
     } else {
       console.log('User dismissed the install prompt');
+      localStorage.setItem('pwa-install-dismissed', 'true');
     }
 
     setDeferredPrompt(null);
@@ -95,4 +97,3 @@ export default function AddToHomePrompt() {
     </div>
   );
 }
-

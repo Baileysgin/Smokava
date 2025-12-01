@@ -62,4 +62,3 @@ echo "   - Login: gh auth login"
 echo ""
 echo "4. Test:"
 echo "   git pull origin main"
-

@@ -1,160 +1,98 @@
 #!/bin/bash
 
-# ===========================================
-# RESTORE DATABASE FROM BACKUP
-# ===========================================
-# This script restores data from READ__ME_TO_RECOVER_YOUR_DATA to smokava database
-# Usage: ./scripts/restore-database.sh
+# Database Restore Script for Smokava
+# This script restores MongoDB from a backup file
 
 set -e
 
-echo "🔄 Restoring database from backup..."
+# Configuration
+BACKUP_FILE=$1
+MONGODB_URI="${MONGODB_URI:-mongodb://mongodb:27017/smokava}"
+DB_NAME="${DB_NAME:-smokava}"
 
-# Get the directory of this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-cd "$PROJECT_DIR"
+log() {
+    echo -e "${GREEN}[RESTORE]${NC} $1"
+}
 
-# Check if running in Docker or locally
-if [ -f "/.dockerenv" ] || [ -n "$DOCKER_CONTAINER" ]; then
-    echo "📦 Running inside Docker container"
-    MONGODB_URI="${MONGODB_URI:-mongodb://mongodb:27017/smokava}"
-else
-    echo "💻 Running locally"
-    MONGODB_URI="${MONGODB_URI:-mongodb://localhost:27017/smokava}"
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+    exit 1
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+# Check if backup file is provided
+if [ -z "$BACKUP_FILE" ]; then
+    error "Usage: $0 <backup-file>"
 fi
 
-# Check if docker-compose is available
-if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
-    if docker compose ps 2>/dev/null | grep -q "smokava-mongodb.*Up"; then
-        echo "🐳 Using Docker Compose MongoDB container"
+# Check if backup file exists
+if [ ! -f "$BACKUP_FILE" ]; then
+    error "Backup file not found: $BACKUP_FILE"
+fi
 
-        echo "📋 Step 1: Checking backup database..."
-        docker compose exec -T mongodb mongosh READ__ME_TO_RECOVER_YOUR_DATA --quiet --eval "
-            const userCount = db.users.countDocuments();
-            const postCount = db.posts.countDocuments();
-            const restaurantCount = db.restaurants.countDocuments();
-            print('Backup database contains:');
-            print('  Users: ' + userCount);
-            print('  Posts: ' + postCount);
-            print('  Restaurants: ' + restaurantCount);
-        " 2>&1
+log "Restoring from: $BACKUP_FILE"
 
-        echo ""
-        echo "📋 Step 2: Copying users from backup..."
-        docker compose exec -T mongodb mongosh --quiet --eval "
-            use READ__ME_TO_RECOVER_YOUR_DATA;
-            const users = db.users.find({}).toArray();
-            use smokava;
-            users.forEach(user => {
-                // Remove _id to allow MongoDB to generate new one, or keep existing
-                const existing = db.users.findOne({username: user.username});
-                if (!existing) {
-                    db.users.insertOne(user);
-                    print('Restored user: ' + user.username);
-                } else {
-                    print('User already exists: ' + user.username + ' (skipping)');
-                }
-            });
-            print('Users restored: ' + db.users.countDocuments());
-        " 2>&1
+# Determine docker compose command
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    error "Neither 'docker compose' nor 'docker-compose' found!"
+fi
 
-        echo ""
-        echo "📋 Step 3: Copying restaurants from backup..."
-        docker compose exec -T mongodb mongosh --quiet --eval "
-            use READ__ME_TO_RECOVER_YOUR_DATA;
-            const restaurants = db.restaurants.find({}).toArray();
-            use smokava;
-            restaurants.forEach(restaurant => {
-                const existing = db.restaurants.findOne({name: restaurant.name});
-                if (!existing) {
-                    db.restaurants.insertOne(restaurant);
-                    print('Restored restaurant: ' + restaurant.name);
-                } else {
-                    print('Restaurant already exists: ' + restaurant.name + ' (skipping)');
-                }
-            });
-            print('Restaurants restored: ' + db.restaurants.countDocuments());
-        " 2>&1
+# Extract connection details from MONGODB_URI
+if [[ "$MONGODB_URI" == mongodb+srv://* ]]; then
+    # MongoDB Atlas connection - use mongorestore directly
+    log "Using MongoDB Atlas connection"
+    if command -v mongorestore >/dev/null 2>&1; then
+        mongorestore --uri="$MONGODB_URI" --archive="$BACKUP_FILE" --gzip --drop
+    else
+        error "mongorestore not found and MongoDB Atlas requires it"
+    fi
+else
+    # Local MongoDB connection - use docker exec
+    HOST_PORT=$(echo "$MONGODB_URI" | sed -E 's|mongodb://([^/]+)/.*|\1|')
+    HOST=$(echo "$HOST_PORT" | cut -d: -f1)
+    PORT=$(echo "$HOST_PORT" | cut -d: -f2)
 
-        echo ""
-        echo "📋 Step 4: Copying posts from backup..."
-        docker compose exec -T mongodb mongosh --quiet --eval "
-            use READ__ME_TO_RECOVER_YOUR_DATA;
-            const posts = db.posts.find({}).toArray();
-            use smokava;
-            let restored = 0;
-            posts.forEach(post => {
-                // Check if post exists by user + restaurant + caption combination
-                const existing = db.posts.findOne({
-                    user: post.user,
-                    restaurant: post.restaurant,
-                    caption: post.caption
-                });
-                if (!existing) {
-                    db.posts.insertOne(post);
-                    restored++;
-                }
-            });
-            print('Posts restored: ' + restored);
-            print('Total posts: ' + db.posts.countDocuments());
-        " 2>&1
+    if [ -z "$PORT" ]; then
+        PORT=27017
+    fi
 
-        echo ""
-        echo "📋 Step 5: Copying packages from backup..."
-        docker compose exec -T mongodb mongosh --quiet --eval "
-            use READ__ME_TO_RECOVER_YOUR_DATA;
-            const packages = db.packages.find({}).toArray();
-            use smokava;
-            packages.forEach(pkg => {
-                const existing = db.packages.findOne({name: pkg.name});
-                if (!existing) {
-                    db.packages.insertOne(pkg);
-                    print('Restored package: ' + pkg.name);
-                }
-            });
-            print('Packages restored: ' + db.packages.countDocuments());
-        " 2>&1
+    log "Connecting to MongoDB at $HOST:$PORT"
 
-        echo ""
-        echo "📋 Step 6: Copying user packages from backup..."
-        docker compose exec -T mongodb mongosh --quiet --eval "
-            use READ__ME_TO_RECOVER_YOUR_DATA;
-            const userPackages = db.userpackages.find({}).toArray();
-            use smokava;
-            let restored = 0;
-            userPackages.forEach(upkg => {
-                const existing = db.userpackages.findOne({
-                    user: upkg.user,
-                    package: upkg.package,
-                    purchasedAt: upkg.purchasedAt
-                });
-                if (!existing) {
-                    db.userpackages.insertOne(upkg);
-                    restored++;
-                }
-            });
-            print('User packages restored: ' + restored);
-            print('Total user packages: ' + db.userpackages.countDocuments());
-        " 2>&1
-
-        echo ""
-        echo "✅ Database restoration completed!"
-        echo ""
-        echo "📊 Final Summary:"
-        docker compose exec -T mongodb mongosh smokava --quiet --eval "
-            print('Users: ' + db.users.countDocuments());
-            print('Posts: ' + db.posts.countDocuments());
-            print('Restaurants: ' + db.restaurants.countDocuments());
-            print('Packages: ' + db.packages.countDocuments());
-            print('UserPackages: ' + db.userpackages.countDocuments());
-        " 2>&1
-
-        exit 0
+    # Try to use docker exec if MongoDB is in a container
+    if [ "$HOST" = "mongodb" ] || [ "$HOST" = "localhost" ] || [ "$HOST" = "127.0.0.1" ]; then
+        # Find MongoDB container name
+        MONGODB_CONTAINER=$($DOCKER_COMPOSE_CMD ps -q mongodb 2>/dev/null || echo "")
+        if [ -n "$MONGODB_CONTAINER" ]; then
+            log "Using docker exec to run mongorestore inside MongoDB container"
+            docker cp "$BACKUP_FILE" "$MONGODB_CONTAINER:/tmp/restore.gz"
+            docker exec "$MONGODB_CONTAINER" mongorestore --host="$HOST" --port="$PORT" --db="$DB_NAME" --archive=/tmp/restore.gz --gzip --drop
+            docker exec "$MONGODB_CONTAINER" rm -f /tmp/restore.gz
+        elif command -v mongorestore >/dev/null 2>&1; then
+            # Fallback to local mongorestore if container not found
+            log "MongoDB container not found, using local mongorestore"
+            mongorestore --host="$HOST" --port="$PORT" --db="$DB_NAME" --archive="$BACKUP_FILE" --gzip --drop
+        else
+            error "mongorestore not found and MongoDB container not running"
+        fi
+    elif command -v mongorestore >/dev/null 2>&1; then
+        # Use local mongorestore for remote connections
+        mongorestore --host="$HOST" --port="$PORT" --db="$DB_NAME" --archive="$BACKUP_FILE" --gzip --drop
+    else
+        error "mongorestore not found"
     fi
 fi
 
-echo "❌ Docker Compose not available or MongoDB not running"
-exit 1
-
+log "Restore completed successfully!"

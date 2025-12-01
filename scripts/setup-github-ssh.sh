@@ -36,14 +36,14 @@ fi
 # Step 2: Generate SSH key if needed
 if [ "$SKIP_GENERATION" != "true" ]; then
     echo -e "${BLUE}Step 1: Generating SSH key...${NC}"
-    
+
     # Ensure .ssh directory exists
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
-    
+
     # Generate key
     ssh-keygen -t ed25519 -C "github-actions-smokava" -f "$SSH_KEY_PATH" -N ""
-    
+
     echo -e "${GREEN}✅ SSH key generated${NC}"
     echo ""
 fi
@@ -145,4 +145,3 @@ echo -e "${YELLOW}Your SSH key location:${NC}"
 echo "  Private: $SSH_KEY_PATH"
 echo "  Public:  $SSH_KEY_PATH.pub"
 echo ""
-

@@ -257,7 +257,7 @@ router.post('/verify-consumption-otp', async (req, res) => {
           }
 
           return res.status(403).json({
-            message: 'outside allowed timeframe',
+            message: 'این بسته در این ساعت فعال نیست',
             reason: 'Package can only be used during specified time windows',
             nextAvailableWindow: nextWindow ? nextWindow.toISOString() : null,
             currentTime: now.format('HH:mm'),
@@ -271,7 +271,7 @@ router.post('/verify-consumption-otp', async (req, res) => {
 
     if (validPackages.length === 0) {
       return res.status(403).json({
-        message: 'outside allowed timeframe',
+        message: 'این بسته در این ساعت فعال نیست',
         reason: 'No active packages available in current time window'
       });
     }
@@ -383,7 +383,7 @@ router.post('/redeem', auth, async (req, res) => {
 
       if (!inWindow) {
         return res.status(403).json({
-          message: 'outside allowed timeframe',
+          message: 'این بسته در این ساعت فعال نیست',
           reason: 'Package can only be used during specified time windows'
         });
       }

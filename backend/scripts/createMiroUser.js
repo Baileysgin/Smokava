@@ -69,4 +69,3 @@ async function createMiroUser() {
 }
 
 createMiroUser();
-
