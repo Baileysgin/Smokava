@@ -12,8 +12,7 @@ import {
   Select,
   Modal,
 } from 'antd';
-import dayjs from 'dayjs';
-import { SaveOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { adminService } from '../services/adminService';
 
 const { Title } = Typography;
