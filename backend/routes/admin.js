@@ -388,7 +388,24 @@ router.get('/consumed-packages', auth, requireAdmin, async (req, res) => {
 router.get('/users', auth, requireAdmin, async (req, res) => {
   try {
     console.log('📊 GET /admin/users - Request received');
+    console.log('📊 MongoDB connection state:', mongoose.connection.readyState);
+    console.log('📊 Database name:', mongoose.connection.db?.databaseName);
+    
     const { page = 1, limit = 20 } = req.query;
+
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
+      return res.status(503).json({ 
+        message: 'Database connection error',
+        error: 'MongoDB not connected',
+        users: [],
+        total: 0,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: 0
+      });
+    }
 
     const users = await User.find()
       .sort({ createdAt: -1 })
@@ -399,18 +416,28 @@ router.get('/users', auth, requireAdmin, async (req, res) => {
     const total = await User.countDocuments();
 
     console.log(`📊 GET /admin/users - Found ${users.length} users (total: ${total})`);
+    console.log(`📊 Database: ${mongoose.connection.db?.databaseName || 'unknown'}`);
 
     res.json({
-      users,
-      total,
+      users: users || [],
+      total: total || 0,
       page: parseInt(page),
       limit: parseInt(limit),
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil((total || 0) / limit)
     });
   } catch (error) {
     console.error('❌ Get users error:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('MongoDB state:', mongoose.connection.readyState);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      users: [],
+      total: 0,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: 0
+    });
   }
 });
 

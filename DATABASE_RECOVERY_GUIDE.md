@@ -1,251 +1,116 @@
-# 🚨 Database Recovery Guide
+# Database Recovery Guide - No Users Found
 
-## ⚠️ Critical Situation
+**Issue**: Admin panel shows "No data available" - Database has 0 users
 
-Your database has been affected by what appears to be a **ransomware attack**. A suspicious database named `READ__ME_TO_RECOVER_YOUR_DATA` was detected, which is a classic indicator of MongoDB ransomware.
+## 🔍 Diagnosis
 
-## 📊 Current Status
+The database appears to be empty or reset. This can happen if:
+1. Database volume was removed/recreated
+2. Database was reset during deployment
+3. Connection to wrong database
+4. Data migration issue
 
-- ✅ **MongoDB Volume**: Intact (329MB of data)
-- ✅ **MongoDB Container**: Running and healthy
-- ⚠️ **Collections**: Mostly empty (only 2 users remain)
-- 🚨 **Suspicious Database**: `READ__ME_TO_RECOVER_YOUR_DATA` detected
-- ❌ **Missing Data**: Packages, Restaurants, Admins
+## ✅ Quick Fixes
 
-## 🔄 Immediate Recovery Steps
-
-### Option 1: Quick Recovery (Recommended)
-
-Run the recovery script:
+### Option 1: Check if this is Production vs Local
 
 ```bash
-# On the server
+# Check which database you're connected to
+docker compose exec mongodb mongosh --eval "db.getName()" smokava
+
+# Check if production database has data
+# (SSH to production server)
 ssh root@91.107.241.245
-cd /opt/smokava
-./scripts/recover-database.sh
+docker compose exec mongodb mongosh --eval "db.users.countDocuments()" smokava
 ```
 
-Or from local machine:
+### Option 2: Restore from Backup
 
 ```bash
-# Make script executable
-chmod +x scripts/recover-database.sh
+# List available backups
+ls -lh /var/backups/smokava/
 
-# Run recovery
-SERVER=root@91.107.241.245 SSH_PASS=pqwRU4qhpVW7 ./scripts/recover-database.sh
+# Restore from latest backup
+bash scripts/restore-database.sh /var/backups/smokava/smokava_backup_LATEST.gz
 ```
 
-### Option 2: Manual Recovery
+### Option 3: Check Database Connection
 
 ```bash
-# SSH to server
-ssh root@91.107.241.245
-cd /opt/smokava
+# Verify MongoDB is running
+docker compose ps mongodb
 
-# 1. Remove suspicious database
-docker exec smokava-mongodb mongosh --eval 'db.getSiblingDB("READ__ME_TO_RECOVER_YOUR_DATA").dropDatabase()'
+# Check connection
+docker compose exec mongodb mongosh --eval "db.adminCommand('ping')"
 
-# 2. Recreate admin user
-docker exec smokava-backend node scripts/createAdmin.js admin admin123
-
-# 3. Seed packages and restaurants
-docker exec smokava-backend node scripts/seed.js
-
-# 4. Verify recovery
-docker exec smokava-mongodb mongosh smokava --eval 'db.getCollectionNames().forEach(c => print(c + ": " + db[c].countDocuments()))'
+# Check database name
+docker compose exec mongodb mongosh --eval "db.getName()"
 ```
 
-## 🛡️ Security Measures (URGENT)
-
-### 1. Secure MongoDB Immediately
+### Option 4: Verify Environment Variables
 
 ```bash
-# Stop MongoDB from being accessible from outside
-# Edit docker-compose.yml and remove port mapping:
-# ports:
-#   - "27017:27017"  # REMOVE THIS LINE
+# Check MONGODB_URI
+docker compose exec backend printenv MONGODB_URI
 
-# Restart MongoDB
-docker compose restart mongodb
+# Should be: mongodb://mongodb:27017/smokava
 ```
 
-### 2. Enable MongoDB Authentication
+## 🔧 Production Database Check
 
-Create a script to enable authentication:
+If this is happening on production:
 
-```bash
-# Create admin user in MongoDB
-docker exec smokava-mongodb mongosh admin --eval '
-db.createUser({
-  user: "admin",
-  pwd: "CHANGE_THIS_STRONG_PASSWORD",
-  roles: [ { role: "root", db: "admin" } ]
-})'
+1. **Check if database volume exists:**
+   ```bash
+   docker volume ls | grep mongodb
+   ```
 
-# Update docker-compose.yml MONGODB_URI:
-# MONGODB_URI=mongodb://admin:CHANGE_THIS_STRONG_PASSWORD@mongodb:27017/smokava?authSource=admin
-```
+2. **Check if volume is mounted:**
+   ```bash
+   docker compose config | grep -A 5 volumes
+   ```
 
-### 3. Restrict Network Access
+3. **Verify data persistence:**
+   ```bash
+   docker compose exec mongodb mongosh --eval "db.stats()" smokava
+   ```
 
-```bash
-# Only allow connections from backend container
-# Update docker-compose.yml mongodb service:
-# networks:
-#   - smokava-network
-# # Remove ports section or bind to 127.0.0.1 only
-```
+## 🚨 Emergency Recovery
 
-### 4. Firewall Rules
+If database was accidentally wiped:
 
-```bash
-# Block MongoDB port from external access
-ufw deny 27017
-# or
-iptables -A INPUT -p tcp --dport 27017 -j DROP
-```
+1. **Stop services:**
+   ```bash
+   docker compose stop
+   ```
 
-## 📋 Post-Recovery Checklist
+2. **Restore from backup:**
+   ```bash
+   bash scripts/restore-database.sh /var/backups/smokava/smokava_backup_LATEST.gz
+   ```
 
-- [ ] Remove suspicious database
-- [ ] Recreate admin user
-- [ ] Seed packages and restaurants
-- [ ] Verify all collections have data
-- [ ] Secure MongoDB (remove external port access)
-- [ ] Enable MongoDB authentication
-- [ ] Set up firewall rules
-- [ ] Create immediate backup
-- [ ] Set up automated daily backups
-- [ ] Review server logs for attack vectors
-- [ ] Change all passwords
-- [ ] Update SSH keys
-- [ ] Review Docker security
+3. **Restart services:**
+   ```bash
+   docker compose up -d
+   ```
 
-## 🔍 Investigation
+## 📋 Prevention
 
-### Check Attack Vector
+To prevent this in the future:
 
-```bash
-# Check MongoDB logs
-docker logs smokava-mongodb | grep -i "drop\|delete\|remove" | tail -50
+1. **Always use named volumes** (already configured)
+2. **Never use `docker compose down -v`** (removes volumes)
+3. **Always backup before deployment**
+4. **Use `deploy-safe.sh`** which preserves volumes
 
-# Check system logs
-journalctl -u docker | grep -i mongodb | tail -50
+## 🔍 Debugging Steps
 
-# Check for suspicious processes
-ps aux | grep -i mongo
-
-# Check network connections
-netstat -tulpn | grep 27017
-```
-
-### Common Attack Vectors
-
-1. **Exposed MongoDB Port**: Port 27017 exposed to internet
-2. **No Authentication**: MongoDB running without auth
-3. **Weak Passwords**: Default or weak credentials
-4. **Unpatched Software**: Old MongoDB versions with vulnerabilities
-5. **Docker Security**: Containers running with excessive privileges
-
-## 💾 Backup Strategy
-
-### Immediate Backup
-
-```bash
-# Create backup now
-./scripts/backup-mongodb.sh
-
-# Or manually
-docker exec smokava-mongodb mongodump --archive --gzip --db=smokava > backup_$(date +%Y%m%d_%H%M%S).gz
-```
-
-### Automated Backups
-
-```bash
-# Add to crontab (daily at 2 AM)
-crontab -e
-# Add:
-0 2 * * * /opt/smokava/scripts/backup-mongodb.sh >> /var/log/mongodb-backup.log 2>&1
-```
-
-## 🚨 Prevention Measures
-
-1. **Never expose MongoDB to internet**
-   - Remove port mapping: `27017:27017`
-   - Only allow internal Docker network access
-
-2. **Always enable authentication**
-   - Create admin user with strong password
-   - Use connection string with credentials
-
-3. **Regular backups**
-   - Daily automated backups
-   - Test restore procedures regularly
-
-4. **Monitor access**
-   - Log all MongoDB connections
-   - Set up alerts for suspicious activity
-
-5. **Keep software updated**
-   - Regular MongoDB updates
-   - Security patches applied promptly
-
-6. **Network security**
-   - Firewall rules
-   - VPN for admin access
-   - SSH key authentication only
-
-## 📞 If Data Cannot Be Recovered
-
-If the data is truly lost and no backups exist:
-
-1. **Accept the loss** - Start fresh with seed data
-2. **Implement security** - Prevent future attacks
-3. **Set up monitoring** - Detect attacks early
-4. **Regular backups** - Never lose data again
-
-## ✅ Recovery Verification
-
-After running recovery, verify:
-
-```bash
-# Check collections
-docker exec smokava-mongodb mongosh smokava --eval '
-print("Users: " + db.users.countDocuments());
-print("Packages: " + db.packages.countDocuments());
-print("Restaurants: " + db.restaurants.countDocuments());
-print("Admins: " + db.admins.countDocuments());
-'
-
-# Test admin login
-# Go to: https://admin.smokava.com
-# Login with: admin / admin123
-```
-
-## 📝 Summary
-
-**Current Situation:**
-- 🚨 Ransomware attack detected
-- ⚠️ Most data missing (packages, restaurants, admins)
-- ✅ Volume intact (329MB)
-- ✅ 2 users remain
-
-**Action Required:**
-1. Run recovery script immediately
-2. Secure MongoDB (remove external access)
-3. Enable authentication
-4. Set up automated backups
-5. Review server security
-
-**Prevention:**
-- Never expose MongoDB port 27017 to internet
-- Always use authentication
-- Regular backups
-- Monitor for suspicious activity
+1. Check database connection
+2. Verify volume persistence
+3. Check for recent backups
+4. Verify environment variables
+5. Check deployment logs
 
 ---
 
-**Status**: 🚨 **URGENT - Recovery Required**
-**Date**: 2025-11-29
-**Priority**: **CRITICAL**
-
+**If this is production**, immediately check backups and restore if needed!
