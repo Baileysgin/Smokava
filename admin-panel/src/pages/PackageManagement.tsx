@@ -12,7 +12,7 @@ import {
   Select,
   Modal,
 } from 'antd';
-import { SaveOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { adminService } from '../services/adminService';
 
 const { Title } = Typography;
