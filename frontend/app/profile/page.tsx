@@ -23,10 +23,19 @@ export default function ProfilePage() {
       router.push('/auth');
       return;
     }
-    fetchStats();
-    fetchFollowCounts();
-    fetchUserPrivacy();
-  }, [isAuthenticated, router, user?._id]);
+    if (!user?._id) return; // Wait for user to load
+
+    // Use a single effect with proper dependencies to avoid duplicate calls
+    const loadData = async () => {
+      await Promise.all([
+        fetchStats(),
+        fetchFollowCounts(),
+        fetchUserPrivacy()
+      ]);
+    };
+
+    loadData();
+  }, [isAuthenticated, user?._id]); // Removed router dependency
 
   const fetchStats = async () => {
     try {

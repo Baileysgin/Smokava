@@ -48,7 +48,10 @@ router.post('/login', async (req, res) => {
 
     if (!admin) {
       console.log('❌ Admin not found:', username);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({
+        message: 'Invalid credentials',
+        hint: 'Admin user may not exist. Check if admin was created with: npm run create-admin'
+      });
     }
 
     console.log('✅ Admin found, checking password...');
@@ -56,7 +59,11 @@ router.post('/login', async (req, res) => {
 
     if (!isMatch) {
       console.log('❌ Password mismatch for admin:', username);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log('💡 Tip: Check credentials file at ADMIN_CREDENTIALS_PATH or run: npm run check-admin');
+      return res.status(401).json({
+        message: 'Invalid credentials',
+        hint: 'Password incorrect. Default password is usually "admin123". Check credentials or reset with: npm run check-admin <username> <new_password>'
+      });
     }
 
     console.log('✅ Password correct, generating token...');
@@ -1530,6 +1537,106 @@ router.get('/health', auth, requireAdmin, async (req, res) => {
       error: error.message,
       timestamp: new Date().toISOString()
     });
+  }
+});
+
+// Get all shared profiles (users with public profiles)
+router.get('/shared-profiles', auth, requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const query = {};
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } },
+        { phoneNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Get users who have public profiles (have username or have posts)
+    const users = await User.find(query)
+      .select('firstName lastName username photoUrl phoneNumber createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get stats for each user
+    const usersWithStats = await Promise.all(users.map(async (user) => {
+      const postsCount = await Post.countDocuments({
+        user: user._id,
+        deletedAt: null,
+        published: true
+      });
+      const userPackages = await UserPackage.find({ user: user._id });
+      const restaurantsVisited = new Set();
+      userPackages.forEach(pkg => {
+        if (pkg.history && pkg.history.length > 0) {
+          pkg.history.forEach(item => {
+            if (item.restaurant) {
+              restaurantsVisited.add(item.restaurant.toString());
+            }
+          });
+        }
+      });
+
+      return {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        photoUrl: user.photoUrl,
+        phoneNumber: user.phoneNumber,
+        createdAt: user.createdAt,
+        stats: {
+          totalPosts: postsCount,
+          restaurantsVisited: restaurantsVisited.size
+        },
+        profileUrl: `${process.env.FRONTEND_URL || 'https://smokava.com'}/u/${user.username || user._id}`
+      };
+    }));
+
+    const total = await User.countDocuments(query);
+
+    res.json({
+      users: usersWithStats,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    console.error('Get shared profiles error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete/Disable shared profile
+router.delete('/shared-profiles/:userId', auth, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Remove username to make profile unshareable (or mark as deleted)
+    user.username = null;
+    await user.save();
+
+    res.json({
+      message: 'Shared profile disabled successfully',
+      user: {
+        _id: user._id,
+        username: user.username
+      }
+    });
+  } catch (error) {
+    console.error('Delete shared profile error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

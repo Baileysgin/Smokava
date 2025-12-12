@@ -12,6 +12,10 @@ import {
   StarOutlined,
   PlusCircleOutlined,
   EditOutlined,
+  BarChartOutlined,
+  WalletOutlined,
+  HistoryOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
 
@@ -72,6 +76,26 @@ const Layout = () => {
       key: '/moderation',
       icon: <EditOutlined />,
       label: 'مدیریت پست‌ها و نظرات',
+    },
+    {
+      key: '/analytics',
+      icon: <BarChartOutlined />,
+      label: 'آمار فروش و درآمد',
+    },
+    {
+      key: '/restaurant-payments',
+      icon: <WalletOutlined />,
+      label: 'پرداخت‌های رستوران',
+    },
+    {
+      key: '/settlement-history',
+      icon: <HistoryOutlined />,
+      label: 'تاریخچه تسویه‌ها',
+    },
+    {
+      key: '/shared-profiles',
+      icon: <ShareAltOutlined />,
+      label: 'پروفایل‌های به اشتراک گذاشته شده',
     },
   ];
 

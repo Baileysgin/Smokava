@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Package = require('../models/Package');
 const UserPackage = require('../models/UserPackage');
+const Transaction = require('../models/Transaction');
+const RestaurantPayment = require('../models/RestaurantPayment');
 const auth = require('../middleware/auth');
 const moment = require('moment-timezone');
+const mongoose = require('mongoose');
 
 // Get all packages
 router.get('/', async (req, res) => {
@@ -85,16 +88,74 @@ router.post('/payment-callback', auth, async (req, res) => {
     }
 
     // Calculate expiry date from package durationDays
+    // Use Iran timezone for accurate expiry calculation
     if (userPackage.package && userPackage.package.durationDays) {
-      const expiryDate = new Date(userPackage.purchasedAt);
-      expiryDate.setDate(expiryDate.getDate() + userPackage.package.durationDays);
+      const { addIranDays } = require('../utils/iranTime');
+      const purchasedAtIran = userPackage.purchasedAt ? new Date(userPackage.purchasedAt) : new Date();
+      const expiryDate = addIranDays(purchasedAtIran, userPackage.package.durationDays);
       userPackage.expiresAt = expiryDate;
     }
 
     await userPackage.save();
 
+    // Create transaction record
+    const transaction = new Transaction({
+      user: req.user._id,
+      userPackage: userPackage._id,
+      package: userPackage.package._id,
+      amount: userPackage.package.price,
+      status: 'completed',
+      transactionId: transactionId || null,
+      completedAt: new Date()
+    });
+    await transaction.save();
+
+    // Create restaurant payment records if package has restaurant allocations
+    // Default commission percentage (can be configured via env variable)
+    const commissionPercentage = process.env.RESTAURANT_COMMISSION_PERCENTAGE
+      ? parseFloat(process.env.RESTAURANT_COMMISSION_PERCENTAGE)
+      : 20; // Default 20%
+
+    if (userPackage.package.restaurantAllocations && userPackage.package.restaurantAllocations.length > 0) {
+      // Bundle package: create payment records for each restaurant
+      const totalAmount = userPackage.package.price;
+      const amountPerShisha = totalAmount / userPackage.package.count;
+
+      for (const allocation of userPackage.package.restaurantAllocations) {
+        const restaurantAmount = amountPerShisha * allocation.count;
+        const commissionAmount = (restaurantAmount * commissionPercentage) / 100;
+
+        const restaurantPayment = new RestaurantPayment({
+          restaurant: allocation.restaurant,
+          userPackage: userPackage._id,
+          transaction: transaction._id,
+          amount: commissionAmount,
+          commissionPercentage: commissionPercentage,
+          shishaDebt: allocation.count, // Restaurant owes this many shishas
+          status: 'due'
+        });
+        await restaurantPayment.save();
+      }
+    } else if (userPackage.package.restaurant) {
+      // Single restaurant package
+      const commissionAmount = (userPackage.package.price * commissionPercentage) / 100;
+
+      const restaurantPayment = new RestaurantPayment({
+        restaurant: userPackage.package.restaurant,
+        userPackage: userPackage._id,
+        transaction: transaction._id,
+        amount: commissionAmount,
+        commissionPercentage: commissionPercentage,
+        shishaDebt: userPackage.package.count,
+        status: 'due'
+      });
+      await restaurantPayment.save();
+    }
+    // Note: If package has no restaurant restriction (global package), no restaurant payment is created
+
     res.json({ message: 'Package activated successfully', userPackage });
   } catch (error) {
+    console.error('Payment callback error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -320,6 +381,23 @@ router.post('/verify-consumption-otp', async (req, res) => {
         count: deductCount
       });
 
+      // Update restaurant payment tracking (reduce shishaDebt, increase shishaCredit)
+      if (!userPackage.isGift && userPackage.package) {
+        // Find restaurant payment for this userPackage and restaurant
+        const restaurantPayment = await RestaurantPayment.findOne({
+          userPackage: userPackage._id,
+          restaurant: restaurantId
+        });
+
+        if (restaurantPayment) {
+          // Reduce shishaDebt (restaurant owes less now)
+          restaurantPayment.shishaDebt = Math.max(0, restaurantPayment.shishaDebt - deductCount);
+          // Increase shishaCredit (system owes restaurant for providing service)
+          restaurantPayment.shishaCredit = (restaurantPayment.shishaCredit || 0) + deductCount;
+          await restaurantPayment.save();
+        }
+      }
+
       remainingToDeduct -= deductCount;
     }
 
@@ -417,6 +495,23 @@ router.post('/redeem', auth, async (req, res) => {
     });
 
     await userPackage.save();
+
+    // Update restaurant payment tracking (reduce shishaDebt, increase shishaCredit)
+    if (!userPackage.isGift && userPackage.package) {
+      const restaurantPayment = await RestaurantPayment.findOne({
+        userPackage: userPackage._id,
+        restaurant: restaurantId
+      });
+
+      if (restaurantPayment) {
+        // Reduce shishaDebt (restaurant owes less now)
+        restaurantPayment.shishaDebt = Math.max(0, restaurantPayment.shishaDebt - count);
+        // Increase shishaCredit (system owes restaurant for providing service)
+        restaurantPayment.shishaCredit = (restaurantPayment.shishaCredit || 0) + count;
+        await restaurantPayment.save();
+      }
+    }
+
     res.json(userPackage);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

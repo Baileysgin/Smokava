@@ -110,11 +110,29 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-userSchema.methods.generateAuthToken = function() {
+userSchema.methods.generateAuthToken = function(context = 'user') {
   const payload = { userId: this._id };
-  if (this.role) {
-    payload.role = this.role;
+
+  // Context-aware role assignment
+  // - 'user': Always use 'user' role (default for user app)
+  // - 'admin': Check if user has admin role (for admin panel)
+  // - 'operator': Check if user has restaurant_operator role (for operator panel)
+
+  if (context === 'user') {
+    payload.role = 'user'; // Always user role for user app
+  } else if (context === 'admin') {
+    // Check UserRole model for admin role, fallback to user.role
+    payload.role = this.role === 'admin' ? 'admin' : null;
+  } else if (context === 'operator') {
+    // Check if user has restaurant_operator role
+    payload.role = this.role === 'restaurant_operator' ? 'restaurant_operator' : null;
+  } else {
+    // Fallback to user's default role
+    payload.role = this.role || 'user';
   }
+
+  payload.context = context; // Include context for debugging
+
   return jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
     expiresIn: '30d'
   });

@@ -6,6 +6,7 @@ const User = require('../models/User');
 const UserPackage = require('../models/UserPackage');
 const Restaurant = require('../models/Restaurant');
 const Rating = require('../models/Rating');
+const RestaurantPayment = require('../models/RestaurantPayment');
 const { generateOTP } = require('../services/kavenegar');
 
 // Simple in-memory cache for operator dashboard (3 minutes)
@@ -110,6 +111,24 @@ router.post('/redeem', requireOperator, async (req, res) => {
         count: deductCount,
         isGift: userPackage.isGift || false
       });
+
+      // Update restaurant payment tracking (reduce shishaDebt, increase shishaCredit)
+      if (!userPackage.isGift && userPackage.package) {
+        const RestaurantPayment = require('../models/RestaurantPayment');
+        // Find restaurant payment for this userPackage and restaurant
+        const restaurantPayment = await RestaurantPayment.findOne({
+          userPackage: userPackage._id,
+          restaurant: operatorRestaurantId
+        });
+
+        if (restaurantPayment) {
+          // Reduce shishaDebt (restaurant owes less now)
+          restaurantPayment.shishaDebt = Math.max(0, restaurantPayment.shishaDebt - deductCount);
+          // Increase shishaCredit (system owes restaurant for providing service)
+          restaurantPayment.shishaCredit = (restaurantPayment.shishaCredit || 0) + deductCount;
+          await restaurantPayment.save();
+        }
+      }
 
       remainingToDeduct -= deductCount;
     }
@@ -471,6 +490,161 @@ router.post('/gift', requireOperator, async (req, res) => {
     });
   } catch (error) {
     console.error('Operator gift error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// ============================================
+// OPERATOR ACCOUNTING ENDPOINTS
+// ============================================
+
+// Get operator accounting statistics
+router.get('/accounting', requireOperator, async (req, res) => {
+  try {
+    const operatorRestaurantId = req.user.assignedRestaurant?._id || req.user.assignedRestaurant;
+
+    // Get restaurant payments
+    const restaurantPayments = await RestaurantPayment.find({
+      restaurant: operatorRestaurantId
+    }).populate('userPackage', 'user package').populate('transaction', 'amount');
+
+    // Calculate statistics
+    const totalShishaProvided = restaurantPayments.reduce((sum, payment) => {
+      return sum + (payment.shishaCredit || 0);
+    }, 0);
+
+    const totalShishaPending = restaurantPayments.reduce((sum, payment) => {
+      if (payment.status === 'due' || payment.status === 'pending') {
+        return sum + (payment.shishaDebt || 0);
+      }
+      return sum;
+    }, 0);
+
+    const shishaOwed = restaurantPayments.reduce((sum, payment) => {
+      return sum + (payment.shishaDebt || 0);
+    }, 0);
+
+    const moneyPending = restaurantPayments.reduce((sum, payment) => {
+      if (payment.status === 'due' || payment.status === 'pending') {
+        return sum + (payment.amount || 0);
+      }
+      return sum;
+    }, 0);
+
+    const moneyPaid = restaurantPayments.reduce((sum, payment) => {
+      if (payment.status === 'paid') {
+        return sum + (payment.amount || 0);
+      }
+      return sum;
+    }, 0);
+
+    // Get user-specific logs
+    const operatorRestaurantObjectId = new mongoose.Types.ObjectId(operatorRestaurantId);
+    const userLogs = await UserPackage.aggregate([
+      {
+        $match: {
+          'history.restaurant': operatorRestaurantObjectId
+        }
+      },
+      {
+        $unwind: '$history'
+      },
+      {
+        $match: {
+          'history.restaurant': operatorRestaurantObjectId
+        }
+      },
+      {
+        $group: {
+          _id: '$user',
+          totalShishaProvided: { $sum: '$history.count' },
+          redemptions: { $push: '$$ROOT' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'userData'
+        }
+      },
+      {
+        $unwind: '$userData'
+      },
+      {
+        $project: {
+          userId: '$_id',
+          userName: { $concat: ['$userData.firstName', ' ', '$userData.lastName'] },
+          userPhone: '$userData.phoneNumber',
+          totalShishaProvided: 1,
+          redemptions: {
+            $slice: ['$redemptions', 10] // Last 10 redemptions per user
+          }
+        }
+      },
+      {
+        $sort: { totalShishaProvided: -1 }
+      }
+    ]);
+
+    // Get financial logs (payments per user)
+    const financialLogs = [];
+    const userPaymentsMap = new Map();
+
+    restaurantPayments.forEach(payment => {
+      const userId = payment.userPackage?.user?.toString();
+      if (userId) {
+        if (!userPaymentsMap.has(userId)) {
+          userPaymentsMap.set(userId, {
+            userId,
+            userName: payment.userPackage?.user?.firstName || payment.userPackage?.user?.phoneNumber || 'Unknown',
+            totalAmount: 0,
+            paidAmount: 0,
+            pendingAmount: 0,
+            payments: []
+          });
+        }
+        const userLog = userPaymentsMap.get(userId);
+        userLog.totalAmount += payment.amount || 0;
+        if (payment.status === 'paid') {
+          userLog.paidAmount += payment.amount || 0;
+        } else {
+          userLog.pendingAmount += payment.amount || 0;
+        }
+        userLog.payments.push({
+          paymentId: payment._id,
+          amount: payment.amount,
+          status: payment.status,
+          createdAt: payment.createdAt
+        });
+      }
+    });
+
+    financialLogs.push(...Array.from(userPaymentsMap.values()));
+
+    res.json({
+      restaurantId: operatorRestaurantId,
+      totalShishaProvided,
+      totalShishaPending,
+      shishaOwed,
+      moneyPending,
+      moneyPaid,
+      userLogs: userLogs.map(log => ({
+        userId: log.userId,
+        userName: log.userName || 'نامشخص',
+        userPhone: log.userPhone,
+        totalShishaProvided: log.totalShishaProvided,
+        recentRedemptions: log.redemptions.map(r => ({
+          count: r.history.count,
+          flavor: r.history.flavor,
+          consumedAt: r.history.consumedAt
+        }))
+      })),
+      financialLogs
+    });
+  } catch (error) {
+    console.error('Get operator accounting error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

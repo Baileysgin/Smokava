@@ -271,9 +271,10 @@ router.post('/verify-otp', async (req, res) => {
         await user.save();
       }
 
-      // Generate auth token
-      const token = user.generateAuthToken();
-      console.log('✅ Test code verified, returning token for:', phoneNumber);
+      // Generate auth token with context (default to 'user' for user app)
+      const context = req.body.context || 'user';
+      const token = user.generateAuthToken(context);
+      console.log('✅ Test code verified, returning token for:', phoneNumber, 'context:', context);
       return res.json({ token, user });
     }
 
@@ -346,8 +347,10 @@ router.post('/verify-otp', async (req, res) => {
 
     console.log('✅ OTP verified successfully for:', phoneNumber);
 
-    // Generate auth token
-    const token = user.generateAuthToken();
+    // Generate auth token with context (default to 'user' for user app)
+    // Context can be: 'user' (default), 'operator', 'admin'
+    const context = req.body.context || 'user';
+    const token = user.generateAuthToken(context);
     res.json({ token, user });
   } catch (error) {
     console.error('Verify OTP error:', error);
@@ -400,7 +403,8 @@ router.post('/telegram-login', async (req, res) => {
     }
 
     await user.save();
-    const token = user.generateAuthToken();
+    // Telegram login is always from user app, use 'user' context
+    const token = user.generateAuthToken('user');
     res.json({ token, user });
   } catch (error) {
     console.error('Telegram login error:', error);
@@ -424,7 +428,8 @@ router.post('/login', async (req, res) => {
       await user.save();
     }
 
-    const token = user.generateAuthToken();
+    // Auto-login endpoint - use user context (default)
+    const token = user.generateAuthToken('user');
     res.json({ token, user });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

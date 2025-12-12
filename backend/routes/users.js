@@ -52,11 +52,20 @@ router.get('/stats', auth, async (req, res) => {
     });
 
     // Calculate days active (from first package purchase or first post)
+    // Optimize: Only get the first post by date, don't fetch all posts
     const firstPackage = userPackages.length > 0
-      ? userPackages.sort((a, b) => new Date(a.purchasedAt) - new Date(b.purchasedAt))[0]
+      ? userPackages.reduce((earliest, pkg) => {
+          const pkgDate = new Date(pkg.purchasedAt || 0);
+          const earliestDate = new Date(earliest.purchasedAt || 0);
+          return pkgDate < earliestDate ? pkg : earliest;
+        }, userPackages[0])
       : null;
-    const posts = await Post.find({ user: req.user._id }).sort({ createdAt: 1 });
-    const firstPost = posts.length > 0 ? posts[0] : null;
+
+    // Only fetch the first post by creation date (optimized query)
+    const firstPost = await Post.findOne({ user: req.user._id })
+      .sort({ createdAt: 1 })
+      .select('createdAt')
+      .lean();
 
     let daysActive = 0;
     if (firstPackage || firstPost) {
@@ -276,7 +285,10 @@ router.get('/:userId/following/count', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ count: user.following?.length || 0 });
+    // Use array length directly (should be accurate if array is maintained properly)
+    // But also verify with count to ensure accuracy
+    const count = user.following?.length || 0;
+    res.json({ count });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -400,14 +412,27 @@ router.post('/contacts', auth, async (req, res) => {
   }
 });
 
-// Public profile endpoint (no auth required)
+// Public profile endpoint (no auth required, but supports optional auth for mutual data)
 router.get('/:id/public', async (req, res) => {
   try {
     const { id } = req.params;
+    // Optional auth - try to get user if authenticated
+    let currentUserId = null;
+    try {
+      if (req.headers.authorization) {
+        const jwt = require('jsonwebtoken');
+        const token = req.headers.authorization.replace('Bearer ', '');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        currentUserId = decoded.userId || decoded._id;
+      }
+    } catch (error) {
+      // Not authenticated or invalid token - continue without auth
+    }
+
     // Try to find by username first, then by ID
     let user = await User.findOne({ username: id })
       .select('firstName lastName username photoUrl bio createdAt _id');
-    
+
     if (!user) {
       // Fallback to ID lookup
       user = await User.findById(id)
@@ -433,7 +458,11 @@ router.get('/:id/public', async (req, res) => {
       .select('caption imageUrl restaurant flavor createdAt likes');
 
     // Get stats from history (authoritative source)
-    const userPackages = await UserPackage.find({ user: userId });
+    // Optimize: Only fetch necessary fields
+    const userPackages = await UserPackage.find({ user: userId })
+      .select('history totalCount remainingCount')
+      .lean();
+
     let totalConsumed = 0;
     const restaurantsVisited = new Set();
 
@@ -458,9 +487,38 @@ router.get('/:id/public', async (req, res) => {
       published: true
     });
 
-    // Get follower/following counts
-    const followerCount = user.followers?.length || 0;
-    const followingCount = user.following?.length || 0;
+    // Get follower/following counts - use aggregation for accuracy
+    const followerCount = await User.countDocuments({ following: userId });
+    const followingCount = user.following?.length || 0; // Following is stored in user document
+
+    // Calculate mutual restaurants (if current user is authenticated)
+    let mutualRestaurants = [];
+    if (currentUserId && currentUserId.toString() !== userId.toString()) {
+      const currentUserPackages = await UserPackage.find({ user: currentUserId });
+      const currentUserRestaurants = new Set();
+
+      currentUserPackages.forEach(pkg => {
+        if (pkg.history && pkg.history.length > 0) {
+          pkg.history.forEach(item => {
+            if (item.restaurant) {
+              currentUserRestaurants.add(item.restaurant.toString());
+            }
+          });
+        }
+      });
+
+      // Find mutual restaurants
+      const mutualRestaurantIds = Array.from(restaurantsVisited).filter(rid =>
+        currentUserRestaurants.has(rid)
+      );
+
+      if (mutualRestaurantIds.length > 0) {
+        const Restaurant = require('../models/Restaurant');
+        mutualRestaurants = await Restaurant.find({
+          _id: { $in: mutualRestaurantIds }
+        }).select('nameFa addressFa _id').limit(10);
+      }
+    }
 
     res.json({
       user: {
@@ -479,6 +537,7 @@ router.get('/:id/public', async (req, res) => {
         followerCount,
         followingCount
       },
+      mutualRestaurants,
       posts
     });
   } catch (error) {

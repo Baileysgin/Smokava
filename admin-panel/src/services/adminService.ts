@@ -1,7 +1,39 @@
 import api from '../lib/api';
-import type { DashboardStats, Restaurant, ConsumedItem, User, SoldPackage, UserDetails } from '../types/admin';
+import type {
+  DashboardStats,
+  Restaurant,
+  ConsumedItem,
+  User,
+  SoldPackage,
+  UserDetails,
+  RevenueAnalytics,
+  RevenuePerPackage,
+  RevenuePerRestaurant,
+  DailySales,
+  MonthlySales,
+  PackageUsage,
+  RestaurantUsage,
+  RestaurantPayment,
+  RestaurantPaymentSummary,
+} from '../types/admin';
 
-export type { DashboardStats, Restaurant, ConsumedItem, User, SoldPackage, UserDetails };
+export type {
+  DashboardStats,
+  Restaurant,
+  ConsumedItem,
+  User,
+  SoldPackage,
+  UserDetails,
+  RevenueAnalytics,
+  RevenuePerPackage,
+  RevenuePerRestaurant,
+  DailySales,
+  MonthlySales,
+  PackageUsage,
+  RestaurantUsage,
+  RestaurantPayment,
+  RestaurantPaymentSummary,
+};
 
 export const adminService = {
   // Dashboard
@@ -53,7 +85,6 @@ export const adminService = {
 
   // Users
   getUsers: async (page = 1, limit = 20) => {
-    console.log('adminService.getUsers - Making API call to /admin/users');
     const response = await api.get('/admin/users', {
       params: { page, limit },
     });
@@ -143,5 +174,93 @@ export const adminService = {
       packageId,
     });
     return response.data;
+  },
+
+  // Accounting - Revenue Analytics
+  getRevenueAnalytics: async (): Promise<RevenueAnalytics> => {
+    const response = await api.get('/accounting/analytics/revenue');
+    return response.data;
+  },
+
+  getRevenuePerPackage: async (): Promise<RevenuePerPackage[]> => {
+    const response = await api.get('/accounting/analytics/revenue-per-package');
+    return response.data;
+  },
+
+  getRevenuePerRestaurant: async (): Promise<RevenuePerRestaurant[]> => {
+    const response = await api.get('/accounting/analytics/revenue-per-restaurant');
+    return response.data;
+  },
+
+  getDailySales: async (): Promise<DailySales[]> => {
+    const response = await api.get('/accounting/analytics/daily-sales');
+    return response.data;
+  },
+
+  getMonthlySales: async (): Promise<MonthlySales[]> => {
+    const response = await api.get('/accounting/analytics/monthly-sales');
+    return response.data;
+  },
+
+  // Accounting - Package Usage
+  getUserPackageUsage: async (userId: string): Promise<PackageUsage[]> => {
+    const response = await api.get(`/accounting/usage/user/${userId}`);
+    return response.data;
+  },
+
+  getRestaurantUsage: async (restaurantId: string): Promise<RestaurantUsage> => {
+    const response = await api.get(`/accounting/usage/restaurant/${restaurantId}`);
+    return response.data;
+  },
+
+  // Accounting - Restaurant Payments
+  getRestaurantPayments: async (status?: string, restaurantId?: string): Promise<RestaurantPayment[]> => {
+    const params: any = {};
+    if (status) params.status = status;
+    if (restaurantId) params.restaurantId = restaurantId;
+    const response = await api.get('/accounting/restaurant-payments', { params });
+    return response.data;
+  },
+
+  markPaymentAsPaid: async (paymentId: string, paymentReference?: string): Promise<RestaurantPayment> => {
+    const response = await api.post(`/accounting/restaurant-payments/${paymentId}/paid`, {
+      paymentReference,
+    });
+    return response.data;
+  },
+
+  getRestaurantPaymentSummary: async (): Promise<RestaurantPaymentSummary[]> => {
+    const response = await api.get('/accounting/restaurant-payments/summary');
+    return response.data;
+  },
+
+  // Settlement
+  settleAllPayments: async (notes?: string): Promise<any> => {
+    const response = await api.post('/accounting/settle-all', { notes });
+    return response.data;
+  },
+
+  getSettlements: async (page = 1, limit = 20): Promise<any> => {
+    const response = await api.get('/accounting/settlements', {
+      params: { page, limit },
+    });
+    return response.data;
+  },
+
+  getSettlementById: async (id: string): Promise<any> => {
+    const response = await api.get(`/accounting/settlements/${id}`);
+    return response.data;
+  },
+
+  // Shared Profiles
+  getSharedProfiles: async (page = 1, limit = 20, search?: string): Promise<any> => {
+    const params: any = { page, limit };
+    if (search) params.search = search;
+    const response = await api.get('/admin/shared-profiles', { params });
+    return response.data;
+  },
+
+  deleteSharedProfile: async (userId: string): Promise<void> => {
+    await api.delete(`/admin/shared-profiles/${userId}`);
   },
 };

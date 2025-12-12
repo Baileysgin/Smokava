@@ -7,6 +7,7 @@ import {
   UserOutlined,
   ShopOutlined,
   HomeOutlined,
+  DollarOutlined,
 } from '@ant-design/icons';
 import { useOperatorAuthStore } from '../store/operatorAuthStore';
 import type { MenuProps } from 'antd';
@@ -43,6 +44,11 @@ const OperatorLayout = () => {
       key: '/operator/restaurant',
       icon: <ShopOutlined />,
       label: 'اطلاعات رستوران',
+    },
+    {
+      key: '/operator/accounting',
+      icon: <DollarOutlined />,
+      label: 'حسابداری',
     },
   ];
 

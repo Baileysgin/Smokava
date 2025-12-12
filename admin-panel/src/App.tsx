@@ -27,11 +27,16 @@ const ActivatePackage = lazy(() => import('./pages/ActivatePackage'));
 const Gifts = lazy(() => import('./pages/Gifts'));
 const Ratings = lazy(() => import('./pages/Ratings'));
 const Moderation = lazy(() => import('./pages/Moderation'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const RestaurantPayments = lazy(() => import('./pages/RestaurantPayments'));
+const SettlementHistory = lazy(() => import('./pages/SettlementHistory'));
+const SharedProfiles = lazy(() => import('./pages/SharedProfiles'));
 const OperatorDashboard = lazy(() => import('./pages/OperatorDashboard'));
 const OperatorRedeem = lazy(() => import('./pages/OperatorRedeem'));
 const OperatorHistory = lazy(() => import('./pages/OperatorHistory'));
 const OperatorCustomers = lazy(() => import('./pages/OperatorCustomers'));
 const OperatorRestaurant = lazy(() => import('./pages/OperatorRestaurant'));
+const OperatorAccounting = lazy(() => import('./pages/OperatorAccounting'));
 
 // Loading component for lazy routes
 const PageLoader = () => (
@@ -141,6 +146,26 @@ function App() {
             <Route path="moderation" element={
               <Suspense fallback={<PageLoader />}>
                 <Moderation />
+              </Suspense>
+            } />
+            <Route path="analytics" element={
+              <Suspense fallback={<PageLoader />}>
+                <Analytics />
+              </Suspense>
+            } />
+            <Route path="restaurant-payments" element={
+              <Suspense fallback={<PageLoader />}>
+                <RestaurantPayments />
+              </Suspense>
+            } />
+            <Route path="settlement-history" element={
+              <Suspense fallback={<PageLoader />}>
+                <SettlementHistory />
+              </Suspense>
+            } />
+            <Route path="shared-profiles" element={
+              <Suspense fallback={<PageLoader />}>
+                <SharedProfiles />
               </Suspense>
             } />
           </Route>

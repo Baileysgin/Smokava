@@ -8,6 +8,7 @@ import { usePackageStore } from '@/store/packageStore';
 import { useRestaurantStore } from '@/store/restaurantStore';
 import BottomNav from '@/components/BottomNav';
 import RatingModal from '@/components/RatingModal';
+import { getIranTime, toIranTime, getDaysDifferenceInIran, formatIranDatePersian } from '@/utils/iranTime';
 
 // Component to display package expiry information
 function PackageTimeInfo({ package: pkg }: { package: any }) {
@@ -21,10 +22,10 @@ function PackageTimeInfo({ package: pkg }: { package: any }) {
     );
   }
 
-  const now = new Date();
-  const expiryDate = new Date(pkg.expiresAt);
-  const diffMs = expiryDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  // Use Iran timezone for accurate date calculations
+  const now = getIranTime();
+  const expiryDate = toIranTime(pkg.expiresAt);
+  const diffDays = getDaysDifferenceInIran(expiryDate, now);
 
   if (diffDays < 0) {
     // Expired
@@ -56,14 +57,12 @@ function PackageTimeInfo({ package: pkg }: { package: any }) {
     );
   }
 
-  // Show expiry date
-  const day = expiryDate.getDate();
-  const month = expiryDate.toLocaleDateString('fa-IR', { month: 'long' });
-  const year = expiryDate.getFullYear();
+  // Show expiry date in Persian format with Iran timezone
+  const formattedDate = formatIranDatePersian(expiryDate);
   return (
     <div className="flex items-center gap-2 text-accent-500">
       <Clock className="w-4 h-4" />
-      <span className="text-xs">اعتبار تا {`${day} ${month} ${year}`} ({diffDays} روز)</span>
+      <span className="text-xs">اعتبار تا {formattedDate} ({diffDays} روز)</span>
     </div>
   );
 }

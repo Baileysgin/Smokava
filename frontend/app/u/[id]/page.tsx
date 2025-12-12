@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { User, MapPin, Heart, MessageCircle, Share2, Copy, Check, UserPlus } from 'lucide-react';
+import { User, MapPin, Heart, MessageCircle, Share2, Copy, Check, UserPlus, Mail } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Post } from '@/store/feedStore';
 import api from '@/lib/api';
@@ -27,6 +27,11 @@ interface PublicProfileData {
     followerCount?: number;
     followingCount?: number;
   };
+  mutualRestaurants?: Array<{
+    _id: string;
+    nameFa: string;
+    addressFa?: string;
+  }>;
   posts: Post[];
 }
 
@@ -41,6 +46,8 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [mutualRestaurants, setMutualRestaurants] = useState<any[]>([]);
+  const [profileData, setProfileData] = useState<PublicProfileData | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -59,9 +66,12 @@ export default function PublicProfilePage() {
       setLoading(true);
       // Backend handles both username and ID lookup
       const response = await api.get(`/users/${userId}/public`);
-      setProfileUser(response.data.user || response.data);
-      setProfileStats(response.data.stats || {});
-      setPosts(response.data.posts || []);
+      const data = response.data;
+      setProfileData(data);
+      setProfileUser(data.user || response.data);
+      setProfileStats(data.stats || {});
+      setPosts(data.posts || []);
+      setMutualRestaurants(data.mutualRestaurants || []);
     } catch (error: any) {
       console.error('Fetch public profile error:', error);
       // User not found or other error
@@ -118,6 +128,30 @@ export default function PublicProfilePage() {
         setShareCopied(true);
         setTimeout(() => setShareCopied(false), 2000);
       }
+    }
+  };
+
+  const handleInvite = async () => {
+    if (!isAuthenticated || !userId) return;
+    try {
+      const response = await api.post(`/users/${userId}/invite`);
+      const inviteUrl = response.data.inviteUrl;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `دعوت به پیوستن به Smokava`,
+          text: `${profileUser?.firstName || 'کاربر'} شما را به Smokava دعوت کرده است`,
+          url: inviteUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(inviteUrl);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    } catch (error: any) {
+      console.error('Invite error:', error);
+      // Fallback to share profile URL
+      handleShare();
     }
   };
 
@@ -225,6 +259,24 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
+          {/* Mutual Restaurants */}
+          {mutualRestaurants.length > 0 && (
+            <div className="mb-4 pt-4 border-t border-accent-500/20">
+              <h3 className="text-sm text-gray-400 mb-2">رستوران‌های مشترک</h3>
+              <div className="flex flex-wrap gap-2">
+                {mutualRestaurants.map((restaurant) => (
+                  <div
+                    key={restaurant._id}
+                    className="px-3 py-1 bg-accent-500/20 border border-accent-500/30 rounded-full text-sm text-accent-400"
+                  >
+                    <MapPin className="w-3 h-3 inline mr-1" />
+                    {restaurant.nameFa}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-4 gap-4 pt-4 border-t border-accent-500/20">
             <div className="text-center">
@@ -287,4 +339,3 @@ export default function PublicProfilePage() {
     </div>
   );
 }
-
